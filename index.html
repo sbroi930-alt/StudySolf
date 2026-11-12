@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudySolf — пение с анализатором и слуховой анализ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ ПАЛИТРА ============ */
+:root,[data-theme="dark"]{
+  --bg:#0c0a14;--bg2:#120f1d;--surface:#171327;--surface2:#1e1932;--overlay:#251d3d;
+  --line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.16);
+  --text:#f4efe5;--muted:#a89fbb;--faint:#746b8c;
+  --gold:#ffb648;--gold2:#ff8a3d;--violet:#8f7bff;--blue:#54c8ff;--teal:#3bd694;--magenta:#ff6ad5;--red:#ff5d7a;
+  --key-w:#f3ecdc;--key-w2:#e2d8c2;--key-b:#191424;--key-b2:#241c33;
+  --shadow:0 18px 50px rgba(0,0,0,.45);
+  --grad-gold:linear-gradient(135deg,#ffc86b,#ff8a3d);
+  --grad-title:linear-gradient(100deg,#ffc86b 5%,#ff6ad5 50%,#8f7bff 95%);
+}
+[data-theme="light"]{
+  --bg:#f5efe3;--bg2:#efe7d6;--surface:#fdfaf2;--surface2:#f3ecdd;--overlay:#fffdf7;
+  --line:rgba(60,40,10,.12);--line2:rgba(60,40,10,.22);
+  --text:#241d33;--muted:#6c6280;--faint:#9a90ac;
+  --gold:#e08a00;--gold2:#e06a10;--violet:#6a55e8;--blue:#0d84c4;--teal:#0d9a63;--magenta:#d633a8;--red:#e0304f;
+  --shadow:0 14px 40px rgba(90,60,20,.16);
+  --grad-title:linear-gradient(100deg,#d97b00 5%,#d633a8 50%,#6a55e8 95%);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;overflow-x:hidden;transition:background .4s,color .4s}
+button{font-family:inherit;cursor:pointer}
+.mono{font-family:'JetBrains Mono',monospace}
+h1,h2,.display{font-family:'Unbounded',sans-serif}
+::selection{background:var(--gold);color:#1a1206}
+*{scrollbar-width:thin;scrollbar-color:var(--gold) var(--bg2)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+
+/* ============ ФОН ============ */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.bg::before{content:"";position:absolute;inset:-20%;
+  background:radial-gradient(38% 34% at 18% 12%,rgba(143,123,255,.20),transparent 70%),radial-gradient(34% 30% at 84% 18%,rgba(255,138,61,.16),transparent 70%),radial-gradient(40% 36% at 60% 92%,rgba(255,106,213,.12),transparent 70%);
+  animation:aurora 26s ease-in-out infinite alternate}
+[data-theme="light"] .bg::before{opacity:.55}
+@keyframes aurora{from{transform:translate(-2%,-1%)}to{transform:translate(2%,2%)}}
+
+/* ============ ШАПКА ============ */
+.top{position:sticky;top:0;z-index:50;height:64px;display:flex;align-items:center;gap:14px;padding:0 clamp(12px,3vw,28px);
+  background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer}
+.brand-note{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;color:#241505;background:var(--grad-gold);box-shadow:0 4px 18px rgba(255,150,60,.4)}
+.brand-text{font-family:'Unbounded';font-weight:800;font-size:17px;line-height:1.1;display:flex;flex-direction:column}
+.brand-text small{font-family:'Manrope';font-weight:600;font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.nav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1}
+.nav::-webkit-scrollbar{display:none}
+.nav button{padding:8px 13px;border-radius:99px;font-weight:700;font-size:13px;color:var(--muted);white-space:nowrap;background:none;border:none;transition:.2s}
+.nav button:hover{color:var(--text);background:var(--surface2)}
+.nav button.active{color:#241505;background:var(--grad-gold)}
+.top-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.range-badge{font-size:12px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:6px 12px;white-space:nowrap}
+.icon-btn{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:16px;display:grid;place-items:center;color:var(--text);transition:.2s}
+.icon-btn:hover{border-color:var(--gold)}
+.range-note{text-align:center;font-size:12px;color:var(--muted);padding:6px 14px;background:var(--bg2);border-bottom:1px solid var(--line)}
+
+/* ============ КОНТЕЙНЕР ============ */
+main{max-width:1180px;margin:0 auto;padding:26px clamp(12px,3vw,28px) 80px}
+.page-head{margin:10px 0 20px}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.page-head h2{font-size:clamp(22px,3.2vw,32px);font-weight:800;margin-bottom:6px}
+.sub{color:var(--muted);font-size:14.5px;max-width:760px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);animation:fade .35s ease}
+.card h3{font-size:15px;font-weight:800;margin-bottom:14px}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ============ HERO и ПЛИТКИ ============ */
+.hero{padding:30px 0 10px}
+.hero h1{font-size:clamp(28px,4.6vw,50px);font-weight:800;line-height:1.12;margin:10px 0 14px}
+.hero h1 span{background:var(--grad-title);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lead{color:var(--muted);font-size:clamp(14.5px,1.5vw,17px);max-width:640px}
+.group-title{font-family:'Unbounded';font-weight:700;font-size:18px;margin:34px 0 4px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px}
+.tile{--mc:var(--gold);background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative;overflow:hidden}
+.tile::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--mc)}
+.tile:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--mc) 60%,transparent);box-shadow:var(--shadow)}
+.tile .ico{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:21px;margin-bottom:12px;background:color-mix(in srgb,var(--mc) 14%,transparent);border:1px solid color-mix(in srgb,var(--mc) 40%,transparent)}
+.tile b{font-family:'Unbounded';font-weight:700;font-size:15px;display:block;margin-bottom:4px}
+.tile p{font-size:12.5px;color:var(--muted)}
+
+/* ============ КНОПКИ И ПОЛЯ ============ */
+.btn{border:1px solid var(--line2);border-radius:13px;padding:12px 18px;font-weight:800;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--text);background:var(--surface2);min-height:46px;transition:transform .15s,box-shadow .2s,opacity .2s}
+.btn:hover:not(:disabled){transform:translateY(-2px)}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn-gold{background:var(--grad-gold);color:#241505;border:none;box-shadow:0 6px 22px rgba(255,150,60,.35)}
+.btn-red{color:var(--red);border-color:color-mix(in srgb,var(--red) 45%,transparent)}
+.btn-listen{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 45%,transparent);background:color-mix(in srgb,var(--blue) 7%,transparent)}
+.btn-sm{padding:8px 13px;font-size:13px;min-height:36px;border-radius:11px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.between{justify-content:space-between}
+.grid-ctl{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px 14px;align-items:end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+.field output{font-family:'JetBrains Mono';color:var(--gold)}
+select{width:100%;padding:10px 34px 10px 12px;border-radius:11px;border:1px solid var(--line2);background:var(--surface2);color:var(--text);font-family:inherit;font-weight:600;font-size:13.5px;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a89fbb' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+select:hover{border-color:var(--gold)}
+input[type=range]{width:100%;accent-color:var(--gold);cursor:pointer}
+.switch{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);min-height:42px}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.sw{width:38px;height:22px;border-radius:99px;background:var(--surface2);border:1px solid var(--line2);position:relative;flex-shrink:0;transition:.25s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--faint);transition:.25s}
+.switch input:checked+.sw{background:color-mix(in srgb,var(--gold) 30%,transparent);border-color:var(--gold)}
+.switch input:checked+.sw::after{left:18px;background:var(--gold)}
+.hint-line{font-size:12px;color:var(--faint);padding:10px 12px;border-radius:11px;background:var(--surface2);border:1px dashed var(--line2);margin-top:14px}
+details.card summary{cursor:pointer;font-weight:800;font-size:15px;list-style:none}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:" ▾";color:var(--gold)}
+details.card[open] summary::after{content:" ▴"}
+.info-line{font-size:13px;color:var(--muted);margin-top:12px}
+.info-line b{color:var(--gold)}
+
+/* ============ ВИКТОРИНА (СЛУХОВОЙ АНАЛИЗ) ============ */
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.quiz-title{font-weight:800;font-size:16px}
+.badge{background:var(--surface2);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono'}
+.options{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:14px 0}
+.opt{font-weight:700;font-size:13.5px}
+.opt.correct{background:var(--teal)!important;color:#06251a;border-color:var(--teal)}
+.opt.wrong{background:var(--red)!important;color:#fff;border-color:var(--red)}
+.opt.dim{opacity:.45}
+.feedback{min-height:24px;font-weight:700;padding:8px 0}
+.feedback.ok{color:var(--teal)}.feedback.bad{color:var(--red)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
+.bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;min-width:70px;flex:1}
+.bar i{display:block;height:100%;background:var(--grad-gold);transition:width .3s}
+
+/* ============ АНАЛИЗАТОР ============ */
+.an-title{font-family:'Unbounded';font-weight:700;font-size:17px}
+.an-sub{margin-top:2px}
+.status{font-size:14px;color:var(--muted);margin:10px 0 6px;min-height:22px}
+.status b{color:var(--teal)}
+.now-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;margin:8px 0}
+.now-row b{font-size:16px;color:var(--gold)}
+.indicator{width:20px;height:20px;border-radius:50%;background:var(--faint);display:inline-block;transition:background .15s,box-shadow .15s;flex-shrink:0}
+.indicator.ok{background:var(--teal);box-shadow:0 0 14px var(--teal)}
+.indicator.mid{background:var(--gold);box-shadow:0 0 14px var(--gold)}
+.indicator.bad{background:var(--red);box-shadow:0 0 14px var(--red)}
+.meters{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:8px 0}
+.meter-l{display:flex;flex-direction:column;gap:4px}
+.level{height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;border:1px solid var(--line)}
+.level i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--gold),var(--red));transition:width .08s}
+.level.hold i{background:linear-gradient(90deg,var(--violet),var(--teal))}
+.hint{color:var(--gold);font-size:13.5px;min-height:20px;font-weight:600}
+canvas.graph{width:100%;height:270px;display:block;border-radius:14px;background:var(--bg2);border:1px solid var(--line);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:14px}
+.chip-group{display:flex;flex-direction:column;gap:5px;padding:7px 9px 9px;border:1px dashed var(--line2);border-radius:13px}
+.chip-group.current{border-color:var(--gold);border-style:solid}
+.chip-group-label{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--faint);text-transform:uppercase}
+.chip-group.current .chip-group-label{color:var(--gold)}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{min-width:44px;padding:7px 10px;border-radius:11px;text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:13px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);transition:.2s}
+.chip.cur{color:#241505;background:var(--grad-gold);border-color:transparent;box-shadow:0 4px 16px rgba(255,150,60,.45)}
+.chip.good{background:var(--teal);color:#06251a;border-color:var(--teal)}
+.chip.mid{background:var(--gold);color:#241505;border-color:var(--gold)}
+.chip.poor{background:var(--red);color:#fff;border-color:var(--red)}
+.result-box{margin-top:16px;padding:14px;border-radius:14px;background:var(--surface2);border:1px solid var(--line)}
+.result-num{font-family:'Unbounded';font-weight:800;font-size:28px;color:var(--teal)}
+
+/* клавиатура C2–C5 */
+.kb-caption{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--faint);margin:18px 0 6px;letter-spacing:.06em}
+.kbd-wrap{overflow-x:auto}
+.kbd{position:relative;display:flex;height:110px;min-width:600px;user-select:none;touch-action:manipulation;border-radius:0 0 12px 12px;overflow:hidden;border:1px solid var(--line2)}
+.key{cursor:pointer;transition:background .1s}
+.key.white{flex:1;position:relative;background:linear-gradient(180deg,var(--key-w),var(--key-w2));border-right:1px solid rgba(0,0,0,.25);border-radius:0 0 5px 5px}
+.key.black{position:absolute;top:0;height:62%;background:linear-gradient(180deg,var(--key-b2),var(--key-b));border-radius:0 0 4px 4px;z-index:2;box-shadow:0 4px 8px rgba(0,0,0,.5)}
+.key span{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-family:'JetBrains Mono';font-size:9px;font-weight:700;color:#8a7a58;pointer-events:none}
+.key.hl-soft{background:color-mix(in srgb,var(--violet) 55%,var(--key-w))!important}
+.key.black.hl-soft{background:color-mix(in srgb,var(--violet) 70%,var(--key-b))!important}
+.key.hl-ok{background:var(--teal)!important}
+.key.hl-cur{background:var(--gold)!important;box-shadow:0 0 16px var(--gold)}
+.key.press{filter:brightness(.75)}
+
+/* ============ АДАПТИВ ============ */
+@media(max-width:980px){.range-badge{display:none}.brand-text small{display:none}}
+@media(max-width:640px){
+  .top{gap:8px;height:58px}
+  .brand-text{display:none}
+  .row{flex-direction:column;align-items:stretch}
+  .row .btn{width:100%}
+  .actions{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+  .actions .btn{width:100%;padding:10px 8px;font-size:13px}
+  .grid-ctl{grid-template-columns:1fr}
+  .options{grid-template-columns:1fr 1fr}
+  .meters{grid-template-columns:1fr}
+  canvas.graph{height:220px}
+  .kbd{height:90px}
+  .tiles{grid-template-columns:1fr}
+  .card{padding:16px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<header class="top">
+  <div class="brand" id="brand"><span class="brand-note">♪</span><span class="brand-text">StudySolf<small>создатель Брой Вячеслав · учись с нами · 2026г.</small></span></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="top-right">
+    <span class="range-badge">🎹 C2 — C5</span>
+    <button class="icon-btn" id="soundBtn" title="Звук вкл/выкл">🔊</button>
+    <button class="icon-btn" id="themeBtn" title="Тема">🌙</button>
+  </div>
+</header>
+<div class="range-note">Диапазон: C2 (до большой октавы) — C5 (до третьей октавы)</div>
+<main id="view"></main>
+
+<script>
+/* ===================== ОБЩИЕ УТИЛИТЫ ===================== */
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const RU_NAMES=['до','до-диез','ре','ре-диез','ми','фа','фа-диез','соль','соль-диез','ля','ля-диез','си'];
+const MIN_MIDI=36,MAX_MIDI=72; // C2..C5
+const RANGE_TEXT='Диапазон: C2 (до большой октавы) — C5 (до третьей октавы).';
+const ROMAN=['I','II','III','IV','V','VI','VII'];
+const $=(s,p=document)=>p.querySelector(s);
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const randInt=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const noteName=m=>NOTE_NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1);
+const midiFreq=m=>440*Math.pow(2,(m-69)/12); // A4 = 440 Гц
+
+// Сдвиг на целое число октав, чтобы все ноты попали в C2–C5
+function fitShift(midis){let sh=0;const mn=Math.min(...midis),mx=Math.max(...midis);while(mx+sh>MAX_MIDI)sh-=12;while(mn+sh<MIN_MIDI)sh+=12;return mx+sh<=MAX_MIDI?sh:0;}
+// Перенос одиночной ноты в диапазон
+function clampMidi(m){while(m>MAX_MIDI)m-=12;while(m<MIN_MIDI)m+=12;return m;}
+
+// Создание DOM-элемента
+function el(tag,attrs={},...children){const e=document.createElement(tag);for(const [k,v] of Object.entries(attrs)){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='style')e.style.cssText=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='html')e.innerHTML=v;else e.setAttribute(k,v===true?'':v);}for(const c of children.flat(Infinity)){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(c));}return e;}
+function fSel(label,options,value,onchange){const s=el('select',{onchange:e=>onchange(e.target.value)});options.forEach(([v,l])=>s.append(el('option',{value:String(v)},l)));s.value=String(value);return el('label',{class:'field'},el('span',{},label),s);}
+function fToggle(label,checked,onchange){const cb=el('input',{type:'checkbox'});cb.checked=!!checked;cb.addEventListener('change',()=>onchange(cb.checked));return el('label',{class:'switch'},cb,el('span',{class:'sw'}),label);}
+function fRange(label,min,max,value,onchange){const out=el('output',{},String(value));const r=el('input',{type:'range',min,max,value,step:1});r.addEventListener('input',()=>{out.textContent=r.value;onchange(+r.value);});return el('label',{class:'field'},el('span',{},label,out),r);}
+function pageHead(eyebrow,title,desc){return el('div',{class:'page-head'},el('div',{class:'eyebrow'},eyebrow),el('h2',{},title),el('p',{class:'sub'},desc));}
+
+/* ===================== STORAGE (localStorage) ===================== */
+const storage={
+  key:'studySolfV2',data:null,
+  defaults(){return {theme:'dark',muted:false,volume:80,precision:'normal',threshold:12,octaveEq:true,arp:true,
+    sing:{
+      scales:{mode:'full',tonic:0,key:'major',scale:'major',oct:3,dir:'updown',steps:7,order:'seq',anchor:true},
+      intervals:{interval:'rand',dir:'rand',hide:false},
+      triads:{tonic:0,oct:3,scale:'major',degree:0,inv:'rand',chain:true,len:3,anchor:true},
+      sevenths:{tonic:0,oct:2,scale:'major',degree:4,inv:'rand',chain:false,len:3,anchor:true}},
+    ear:{intervals:{mode:'melodic',dir:'asc',level:'simple'},scales:{level:'basic',dir:'up',drone:false},modes:{level:'simple',drone:true},keys:{level:'mode'}},
+    earStats:{intervals:{streak:0,best:0,per:{}},scales:{streak:0,best:0,per:{}},modes:{streak:0,best:0,per:{}},keys:{streak:0,best:0,per:{}}}};},
+  load(){const d=this.defaults();try{const s=JSON.parse(localStorage.getItem(this.key)||'null');if(s)deepMerge(d,s);}catch(e){}this.data=d;},
+  save(){try{localStorage.setItem(this.key,JSON.stringify(this.data));}catch(e){}}
+};
+function deepMerge(t,s){for(const k in s){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])&&t[k]&&typeof t[k]==='object')deepMerge(t[k],s[k]);else t[k]=s[k];}return t;}
+const S=()=>storage.data;
+
+/* ===================== AUDIO ENGINE — живое фортепиано ===================== */
+const audio={
+  ctx:null,master:null,bus:null,wave:null,noiseBuf:null,unlocked:false,
+  // Создание контекста, ревербератора и компрессора (после первого клика)
+  init(){
+    if(!this.ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+      const c=this.ctx=new AC();
+      this.master=c.createGain();this.master.gain.value=this.volGain();
+      const comp=c.createDynamicsCompressor();comp.threshold.value=-14;comp.knee.value=10;comp.ratio.value=3;comp.attack.value=0.004;comp.release.value=0.25;
+      const body=c.createBiquadFilter();body.type='peaking';body.frequency.value=260;body.Q.value=0.8;body.gain.value=2.5; // тёплая «дека»
+      this.bus=c.createGain();
+      const dry=c.createGain();dry.gain.value=1;
+      const verb=c.createConvolver();verb.buffer=this.makeIR(2.3);
+      const wet=c.createGain();wet.gain.value=0.2;
+      this.bus.connect(body);body.connect(dry);body.connect(verb);verb.connect(wet);
+      dry.connect(this.master);wet.connect(this.master);this.master.connect(comp);comp.connect(c.destination);
+      this.wave=this.makeWave();
+      const len=Math.floor(c.sampleRate*0.1);this.noiseBuf=c.createBuffer(1,len,c.sampleRate);const nd=this.noiseBuf.getChannelData(0);for(let i=0;i<len;i++)nd[i]=Math.random()*2-1;
+    }
+    if(this.ctx.state==='suspended')this.ctx.resume();
+  },
+  volGain(){return S().muted?0:(S().volume/100)*0.9;},
+  setVolume(){if(this.master)this.master.gain.setTargetAtTime(this.volGain(),this.ctx.currentTime,0.02);},
+  // Импульсная характеристика небольшого зала
+  makeIR(sec){const c=this.ctx,len=Math.floor(c.sampleRate*sec),b=c.createBuffer(2,len,c.sampleRate);for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<len;i++){const t=i/len;const fade=i<c.sampleRate*0.012?i/(c.sampleRate*0.012):1;d[i]=(Math.random()*2-1)*Math.pow(1-t,3.4)*fade;}}return b;},
+  // Спектр струны фортепиано (убывающие обертоны)
+  makeWave(){const amps=[0,1,0.55,0.34,0.22,0.15,0.1,0.07,0.05,0.035,0.024,0.016,0.011,0.008,0.005,0.003,0.002];const re=new Float32Array(amps.length),im=new Float32Array(amps.length);for(let i=1;i<amps.length;i++)im[i]=amps[i];return this.ctx.createPeriodicWave(re,im);},
+  // Одна нота: три слегка расстроенные «струны», тёплый тон, удар молоточка, двухступенчатый спад
+  playNote(midi,dur=1,when=0,vel=0.8){
+    this.init();if(!this.ctx)return;
+    midi=clampMidi(midi);
+    const c=this.ctx,t=c.currentTime+0.03+when,f=midiFreq(midi);
+    const out=c.createGain();out.gain.value=0;
+    const lp=c.createBiquadFilter();lp.type='lowpass';lp.Q.value=0.5;
+    const bright=Math.min(13000,1400+f*7*(0.6+vel));
+    lp.frequency.setValueAtTime(bright,t);lp.frequency.setTargetAtTime(Math.max(650,f*2.6),t+0.02,0.4);
+    out.connect(lp);lp.connect(this.bus);
+    const ring=0.9+(MAX_MIDI-midi)/36*1.6; // низкие ноты звучат дольше
+    const peak=vel*0.3;
+    out.gain.setValueAtTime(0,t);
+    out.gain.linearRampToValueAtTime(peak,t+0.005);
+    out.gain.setTargetAtTime(peak*0.42,t+0.006,0.11);
+    out.gain.setTargetAtTime(0.0001,t+0.3,ring);
+    const rel=t+Math.max(0.3,dur);
+    out.gain.setTargetAtTime(0.0001,rel,0.14);
+    const end=rel+0.9;
+    [[-2.4,0.3],[0,0.5],[2.8,0.3]].forEach(([dt,gv])=>{const o=c.createOscillator();o.setPeriodicWave(this.wave);o.frequency.value=f;o.detune.value=dt;const g=c.createGain();g.gain.value=gv;o.connect(g);g.connect(out);o.start(t);o.stop(end);});
+    const s=c.createOscillator();s.type='sine';s.frequency.value=f;const sg=c.createGain();sg.gain.value=0.32;s.connect(sg);sg.connect(out);s.start(t);s.stop(end);
+    const n=c.createBufferSource();n.buffer=this.noiseBuf;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=Math.min(4500,f*4);bp.Q.value=0.9;
+    const ng=c.createGain();ng.gain.setValueAtTime(vel*0.08,t);ng.gain.exponentialRampToValueAtTime(0.0001,t+0.045);n.connect(bp);bp.connect(ng);ng.connect(this.bus);n.start(t);n.stop(t+0.07);
+    setTimeout(()=>{try{out.disconnect();lp.disconnect();}catch(e){}},(end-c.currentTime+0.4)*1000);
+  },
+  playChord(midis,dur=1.4,when=0){midis.forEach(m=>this.playNote(m,dur,when,0.62));},
+  playSequence(midis,step=0.5,dur=0.6,when=0){midis.forEach((m,i)=>this.playNote(m,dur,when+i*step));return when+midis.length*step;}
+};
+
+/* ===================== PITCH DETECTOR (микрофон, автокорреляция) ===================== */
+const pitch={
+  stream:null,analyser:null,src:null,buf:null,bbuf:null,raf:null,active:false,
+  async start(onFrame){
+    audio.init();const c=audio.ctx;if(!c)throw new Error('NoAudio');
+    if(c.state==='suspended')await c.resume();
+    this.stop();
+    this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    this.src=c.createMediaStreamSource(this.stream);
+    this.analyser=c.createAnalyser();this.analyser.fftSize=2048;
+    this.src.connect(this.analyser);
+    this.buf=new Float32Array(this.analyser.fftSize);this.bbuf=new Uint8Array(this.analyser.fftSize);
+    this.active=true;
+    const loop=()=>{if(!this.active)return;this.read();onFrame(this.detect(this.buf,c.sampleRate));this.raf=requestAnimationFrame(loop);};
+    this.raf=requestAnimationFrame(loop);
+  },
+  // Чтение сигнала (с запасным вариантом для старых браузеров)
+  read(){if(this.analyser.getFloatTimeDomainData)this.analyser.getFloatTimeDomainData(this.buf);else{this.analyser.getByteTimeDomainData(this.bbuf);for(let i=0;i<this.bbuf.length;i++)this.buf[i]=(this.bbuf[i]-128)/128;}},
+  stop(){this.active=false;if(this.raf)cancelAnimationFrame(this.raf);this.raf=null;try{if(this.src)this.src.disconnect();}catch(e){}this.src=null;if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null;}},
+  // Основная частота методом автокорреляции; freq=-1 — нет сигнала
+  detect(buf,sr){
+    let SIZE=buf.length,rms=0;
+    for(let i=0;i<SIZE;i++)rms+=buf[i]*buf[i];
+    rms=Math.sqrt(rms/SIZE);
+    const thr=0.003+S().threshold*0.0006;
+    if(rms<thr)return {freq:-1,rms};
+    let r1=0,r2=SIZE-1;const t=0.2;
+    for(let i=0;i<SIZE/2;i++)if(Math.abs(buf[i])<t){r1=i;break;}
+    for(let i=1;i<SIZE/2;i++)if(Math.abs(buf[SIZE-i])<t){r2=SIZE-i;break;}
+    const b=buf.subarray(r1,r2);SIZE=b.length;if(SIZE<64)return {freq:-1,rms};
+    const maxLag=Math.min(SIZE-1,Math.floor(sr/55));
+    const corr=new Float32Array(maxLag+1);
+    for(let i=0;i<=maxLag;i++){let s=0;for(let j=0;j<SIZE-i;j++)s+=b[j]*b[j+i];corr[i]=s;}
+    let d=0;while(d<maxLag&&corr[d]>corr[d+1])d++;
+    let maxv=-1,pos=-1;for(let i=d;i<=maxLag;i++)if(corr[i]>maxv){maxv=corr[i];pos=i;}
+    if(pos<=0||(corr[0]>0&&maxv/corr[0]<0.2))return {freq:-1,rms};
+    let T0=pos;const x1=corr[pos-1]||0,x2=corr[pos],x3=corr[pos+1]||0,a=(x1+x3-2*x2)/2,bb=(x3-x1)/2;if(a)T0=pos-bb/(2*a);
+    const f=sr/T0;if(f<50||f>1200)return {freq:-1,rms};
+    return {freq:f,rms};
+  }
+};
+function micError(e){
+  if(!window.isSecureContext)return 'Браузер блокирует микрофон на этой странице. Откройте файл через localhost или https.';
+  const n=e&&e.name;
+  if(n==='NotAllowedError'||n==='SecurityError'||n==='PermissionDeniedError')return 'Доступ к микрофону запрещён. Разрешите его в настройках сайта (значок замка в адресной строке) и попробуйте снова.';
+  if(n==='NotFoundError')return 'Микрофон не найден. Подключите микрофон и попробуйте снова.';
+  if(n==='NotReadableError')return 'Микрофон занят другим приложением.';
+  return 'Не удалось включить микрофон'+(e&&e.message?': '+e.message:'.');
+}
+
+/* ===================== МУЗЫКАЛЬНЫЕ ДАННЫЕ ===================== */
+const SCALES=[
+  {id:'major',name:'Натуральный мажор (ионийский)',steps:[0,2,4,5,7,9,11]},
+  {id:'minor',name:'Натуральный минор (эолийский)',steps:[0,2,3,5,7,8,10]},
+  {id:'harmminor',name:'Гармонический минор',steps:[0,2,3,5,7,8,11]},
+  {id:'melminor',name:'Мелодический минор',steps:[0,2,3,5,7,9,11],down:[0,2,3,5,7,8,10]},
+  {id:'harmmajor',name:'Гармонический мажор',steps:[0,2,4,5,7,8,11]},
+  {id:'melmajor',name:'Мелодический мажор',steps:[0,2,4,5,7,9,11],down:[0,2,4,5,7,8,10]},
+  {id:'dorian',name:'Дорийский',steps:[0,2,3,5,7,9,10]},
+  {id:'phrygian',name:'Фригийский',steps:[0,1,3,5,7,8,10]},
+  {id:'lydian',name:'Лидийский',steps:[0,2,4,6,7,9,11]},
+  {id:'mixolydian',name:'Миксолидийский',steps:[0,2,4,5,7,9,10]},
+  {id:'locrian',name:'Локрийский',steps:[0,1,3,5,6,8,10]},
+  {id:'dbharmmajor',name:'Двойной гармонический мажор',steps:[0,1,4,5,7,8,11]},
+  {id:'doubleaug',name:'Дважды увеличенный мажор (♯4, ♯5)',steps:[0,2,4,6,8,9,11]},
+  {id:'hungarian',name:'Венгерский минор',steps:[0,2,3,6,7,8,11]},
+  {id:'phrygdom',name:'Фригийский доминантовый',steps:[0,1,4,5,7,8,10]},
+  {id:'lyddom',name:'Лидийский доминантовый',steps:[0,2,4,6,7,9,10]},
+  {id:'mixb6',name:'Миксолидийский ♭6',steps:[0,2,4,5,7,8,10]},
+  {id:'pentmaj',name:'Мажорная пентатоника',steps:[0,2,4,7,9]},
+  {id:'pentmin',name:'Минорная пентатоника',steps:[0,3,5,7,10]},
+  {id:'bluesmaj',name:'Блюзовый мажор',steps:[0,2,3,4,7,9]},
+  {id:'bluesmin',name:'Блюзовый минор',steps:[0,3,5,6,7,10]},
+  {id:'whole',name:'Целотонная гамма',steps:[0,2,4,6,8,10]},
+  {id:'dimhw',name:'Уменьшённая (полутон–тон)',steps:[0,1,3,4,6,7,9,10]},
+  {id:'dimwh',name:'Уменьшённая (тон–полутон)',steps:[0,2,3,5,6,8,9,11]},
+  {id:'chrom',name:'Хроматическая гамма',steps:[0,1,2,3,4,5,6,7,8,9,10,11]}
+];
+const scaleById=id=>SCALES.find(s=>s.id===id)||SCALES[0];
+const HEPTA=SCALES.filter(s=>s.steps.length===7);
+const KEY_TYPES=[['major','Мажор'],['minor','Минор натуральный'],['harmminor','Минор гармонический'],['melminor','Минор мелодический'],['harmmajor','Мажор гармонический'],['melmajor','Мажор мелодический']];
+const INTERVALS=[{id:'p1',name:'ч.1',semi:0},{id:'m2',name:'м.2',semi:1},{id:'M2',name:'б.2',semi:2},{id:'m3',name:'м.3',semi:3},{id:'M3',name:'б.3',semi:4},{id:'p4',name:'ч.4',semi:5},{id:'tt',name:'тритон (ув.4/ум.5)',semi:6},{id:'p5',name:'ч.5',semi:7},{id:'m6',name:'м.6',semi:8},{id:'M6',name:'б.6',semi:9},{id:'m7',name:'м.7',semi:10},{id:'M7',name:'б.7',semi:11},{id:'p8',name:'ч.8',semi:12}];
+const INTERVAL_FULL={1:'м2 · малая секунда',2:'б2 · большая секунда',3:'м3 · малая терция',4:'б3 · большая терция',5:'ч4 · чистая кварта',6:'тритон',7:'ч5 · чистая квинта',8:'м6 · малая секста',9:'б6 · большая секста',10:'м7 · малая септима',11:'б7 · большая септима',12:'ч8 · октава'};
+const LEVELS={simple:['p1','m2','M2','m3','M3','p4','p5','p8'],medium:['p1','m2','M2','m3','M3','p4','p5','p8','m6','M6','m7','M7'],all:INTERVALS.map(i=>i.id)};
+const PRECISION={soft:{tol:50,hold:.4,name:'Мягко · ±50¢ · 0.4 с'},normal:{tol:35,hold:.55,name:'Обычно · ±35¢ · 0.55 с'},strict:{tol:25,hold:.7,name:'Строго · ±25¢ · 0.7 с'}};
+const DIR_RU={up:'вверх',down:'вниз',updown:'вверх-вниз'};
+const TRIAD_INV=['5/3 · основной вид','6 · секстаккорд','6/4 · квартсекстаккорд'];
+const SEV_INV=['7 · основной вид','6/5 · квинтсекстаккорд','4/3 · терцквартаккорд','2 · секундаккорд'];
+
+// Высота ступени лада с учётом выхода в соседние октавы
+function scalePitch(steps,base,idx){const L=steps.length;return base+steps[((idx%L)+L)%L]+12*Math.floor(idx/L);}
+// Название аккорда по интервальному составу
+function chordName(ms,size){const root=ms[0],iv=ms.slice(1).map(m=>m-root).join(',');
+  const tri={'4,7':'','3,7':'m','3,6':'dim','4,8':'aug'};
+  const sev={'4,7,11':'maj7','4,7,10':'7','3,7,10':'m7','3,6,10':'m7♭5','3,6,9':'dim7','3,7,11':'mMaj7','4,8,11':'maj7♯5','4,8,10':'7♯5'};
+  const map=size===3?tri:sev;return NOTE_NAMES[root%12]+(map[iv]!=null?map[iv]:(size===3?'':'7'));}
+function playGroups(groups,when=0){let t=when;groups.forEach(g=>{audio.playChord(g,1.1,t);t+=1.25;if(S().arp){audio.playSequence(g,0.4,0.55,t);t+=g.length*0.4+0.35;}});return t;}
+
+/* ===================== ГЕНЕРАТОРЫ ЗАДАНИЙ ДЛЯ ПЕНИЯ ===================== */
+// Гаммы: в тональности, в ладу или полная гамма
+function buildScaleRound(){
+  const o=S().sing.scales;
+  const scale=o.mode==='inkey'?scaleById(o.key):scaleById(o.scale);
+  const tonicPc=+o.tonic,base0=12*(+o.oct+1)+tonicPc,L=scale.steps.length;
+  let degs;
+  if(o.mode==='full'){
+    const up=scale.steps.concat([12]);const down=(scale.down||scale.steps).concat([12]).slice().reverse();
+    degs=o.dir==='up'?up:o.dir==='down'?down:up.concat(down.slice(1));
+  }else{
+    const n=+o.steps;let idx=[];
+    if(o.order==='rand'){let cur=0;idx.push(0);for(let i=1;i<n;i++){let nx;do{nx=cur+rnd([-2,-1,1,2]);}while(nx<0||nx>L);idx.push(nx);cur=nx;}}
+    else{for(let i=0;i<n;i++)idx.push(i);if(o.dir==='down')idx=idx.map(i=>L-i);if(o.dir==='updown')idx=idx.concat(idx.slice(0,-1).reverse());}
+    degs=idx.map(i=>scalePitch(scale.steps,0,i));
+  }
+  const midis=degs.map(d=>base0+d);
+  const sh=fitShift(midis.concat([base0]));const tonic=base0+sh;
+  const notes=midis.map(m=>({midi:m+sh}));
+  const all=notes.map(n=>n.midi);
+  const modeLbl=o.mode==='inkey'?'Пение в тональности':o.mode==='inmode'?'Пение в ладу':'Пение гаммы';
+  const third=scale.steps.includes(4)?4:3;
+  return {notes,tonic,triad:[tonic,tonic+third,tonic+7],
+    title:`${NOTE_NAMES[tonicPc]} · ${scale.name}`,
+    sub:`${modeLbl} · ${o.mode==='full'||o.order!=='rand'?DIR_RU[o.dir]:'случайные ступени'} · звучит: ${noteName(Math.min(...all))}–${noteName(Math.max(...all))}${sh?' · октава подобрана под диапазон C2–C5':''}${o.anchor?' · опора тоники':''}`,
+    play(){let t=0;if(o.anchor){audio.playNote(tonic,1.1);t=1.3;}audio.playSequence(all,0.5,0.6,t);},
+    refPlay(){if(!o.anchor)return 0;audio.playNote(tonic,1.0);return 1.2;}};
+}
+// Интервалы: опорный звук + целевой
+function buildIntervalRound(){
+  const o=S().sing.intervals;
+  const semi=o.interval==='rand'?randInt(1,12):+o.interval;
+  const dir=o.dir==='rand'?rnd(['up','down']):o.dir;
+  let lo=dir==='up'?MIN_MIDI:MIN_MIDI+semi,hi=dir==='up'?MAX_MIDI-semi:MAX_MIDI;
+  const clo=Math.max(lo,43),chi=Math.min(hi,64);if(clo<=chi){lo=clo;hi=chi;}
+  const root=randInt(lo,hi),target=root+(dir==='up'?semi:-semi);
+  return {notes:[{midi:root},{midi:target,hidden:o.hide}],
+    title:INTERVAL_FULL[semi]+' '+DIR_RU[dir],
+    sub:`Тоника ${noteName(root)} — спойте её, затем интервал${o.hide?' · цель скрыта':''}`,
+    play(){if(o.hide){audio.playNote(root,1.4);}else audio.playSequence([root,target],0.8,0.9);},
+    refPlay(){audio.playNote(root,1.0);return 1.2;}};
+}
+// Трезвучия и септаккорды в тональности/ладу, с обращениями и цепочками
+function buildChordRound(kind){
+  const o=S().sing[kind],size=kind==='triads'?3:4,invLabels=kind==='triads'?TRIAD_INV:SEV_INV;
+  const scale=HEPTA.find(s=>s.id===o.scale)||HEPTA[0];
+  const base=12*(+o.oct+1)+(+o.tonic);
+  const len=o.chain?+o.len:1;
+  let degs=[];
+  if(o.chain){let last=0;degs.push(0);for(let i=1;i<len;i++){let d;do{d=randInt(0,6);}while(d===last);degs.push(d);last=d;}}
+  else degs=[+o.degree||0];
+  const groups=degs.map(deg=>{const stack=[];for(let k=0;k<size;k++)stack.push(scalePitch(scale.steps,base,deg+2*k));
+    const inv=o.inv==='rand'?randInt(0,size-1):+o.inv;
+    return {deg,inv,ms:stack.slice(inv).concat(stack.slice(0,inv).map(m=>m+12))};});
+  const allRaw=[];groups.forEach(g=>g.ms.forEach(m=>allRaw.push(m)));
+  const tonicTriad=[base,scalePitch(scale.steps,base,2),scalePitch(scale.steps,base,4)];
+  const sh=fitShift(allRaw.concat(tonicTriad));
+  const notes=[],played=[];
+  groups.forEach((g,gi)=>{const ms=g.ms.map(m=>m+sh);played.push(ms);
+    const label=(len>1?`Аккорд ${gi+1}/${len} · `:'')+ROMAN[g.deg]+' · '+chordName(ms,size)+' ('+invLabels[g.inv].split(' · ')[0]+')';
+    ms.forEach(m=>notes.push({midi:m,group:{id:gi,label}}));});
+  const tt=tonicTriad.map(m=>m+sh);
+  const word=kind==='triads'?'трезвучия':'септаккорда';
+  return {notes,
+    title:o.chain?`Цепочка · ${len} ${word}`:ROMAN[groups[0].deg]+' · '+chordName(played[0],size)+' · '+invLabels[groups[0].inv],
+    sub:`${NOTE_NAMES[+o.tonic]} · ${scale.name}${sh?' · октава подобрана под C2–C5':''} · пойте звуки каждого аккорда снизу вверх`,
+    play(){let t=0;if(o.anchor){audio.playChord(tt,0.9);t=1.2;}playGroups(played,t);},
+    refPlay(){if(!o.anchor)return 0;audio.playChord(tt,0.9);return 1.2;}};
+}
+
+/* ===================== ВИРТУАЛЬНАЯ КЛАВИАТУРА C2–C5 (37 клавиш) ===================== */
+function createKeyboard(){
+  const wrap=el('div',{class:'kbd'}),keys=new Map(),blacks=[];const W=100/22;let wi=0;
+  for(let m=MIN_MIDI;m<=MAX_MIDI;m++){
+    const isB=[1,3,6,8,10].includes(m%12);
+    const k=el('div',{class:'key '+(isB?'black':'white')},isB?null:el('span',{},m%12===0?noteName(m):''));
+    if(isB){k.style.left=`calc(${wi*W}% - ${W*0.3}%)`;k.style.width=(W*0.6)+'%';blacks.push(k);}else{wrap.append(k);wi++;}
+    keys.set(m,k);
+    k.addEventListener('pointerdown',e=>{e.preventDefault();audio.unlocked=true;audio.playNote(m,0.9);k.classList.add('press');setTimeout(()=>k.classList.remove('press'),180);});
+  }
+  blacks.forEach(b=>wrap.append(b));
+  return {el:el('div',{class:'kbd-wrap'},wrap),clear(){keys.forEach(k=>k.classList.remove('hl-cur','hl-ok','hl-soft'));},mark(ms,cls){ms.forEach(m=>{const k=keys.get(m);if(k)k.classList.add(cls);});}};
+}
+
+/* ===================== АНАЛИЗАТОР ИНТОНАЦИИ ===================== */
+// Карточка анализатора: индикатор, текущая нота, график высоты голоса, ступени с точностью, итоговая таблица
+function createAnalyzer(parent,opts){
+  const st={round:null,run:null,hist:[],lastRes:[]};
+  const title=el('div',{class:'an-title'}),sub=el('div',{class:'an-sub muted small'});
+  const listenBtn=el('button',{class:'btn btn-listen',onclick:()=>{audio.unlocked=true;if(st.round)st.round.play();}},'🎧 Прослушать');
+  const startBtn=el('button',{class:'btn btn-gold',onclick:()=>start()},'🎤 Начать петь');
+  const stopBtn=el('button',{class:'btn btn-red',disabled:true,onclick:()=>stop(false)},'■ Стоп');
+  const skipBtn=el('button',{class:'btn',disabled:true,onclick:()=>skip()},'⏭ Пропустить');
+  const hintBtn=el('button',{class:'btn',disabled:true,onclick:()=>hint()},'💡 Подсказка');
+  const newBtn=el('button',{class:'btn',onclick:()=>{if(opts.onNew)opts.onNew();}},'🔄 Новое задание');
+  const status=el('div',{class:'status'},'Нажмите «Прослушать», затем «Начать петь».');
+  const indicator=el('span',{class:'indicator'}),curNote=el('b',{class:'mono'},'—'),freqEl=el('span',{class:'muted mono small'});
+  const level=el('i'),holdBar=el('i'),hintEl=el('div',{class:'hint'}),cv=el('canvas',{class:'graph'}),chips=el('div',{class:'chips'}),result=el('div');
+  const kb=createKeyboard();
+  parent.append(el('div',{class:'card'},
+    el('div',{class:'eyebrow'},'🎤 Анализатор интонации'),title,sub,
+    el('div',{class:'row actions'},listenBtn,startBtn,stopBtn,skipBtn,hintBtn,newBtn),
+    status,
+    el('div',{class:'now-row'},indicator,el('span',{},'Текущая нота:'),curNote,freqEl),
+    el('div',{class:'meters'},el('div',{class:'meter-l'},el('span',{class:'small muted'},'Громкость голоса'),el('div',{class:'level'},level)),el('div',{class:'meter-l'},el('span',{class:'small muted'},'Удержание ноты'),el('div',{class:'level hold'},holdBar))),
+    hintEl,cv,chips,
+    el('div',{class:'kb-caption'},el('span',{},'C2 · до большой октавы'),el('span',{},'фиолетовый — ноты задания · жёлтый — текущая · зелёный — спето'),el('span',{},'C5 · до третьей октавы')),
+    kb.el,result,
+    el('p',{class:'hint-line'},'Индикатор: зелёный — точно, жёлтый — близко (в пределах допуска), красный — мимо. Ступень засчитывается, когда нота удерживается в допуске. Ноты вне диапазона C2–C5 не засчитываются.')));
+  const onResize=()=>draw();window.addEventListener('resize',onResize);
+
+  const isShown=(i,res)=>{const n=st.round.notes[i];return !n.hidden||res[i]!=null;};
+  const label=(i,res)=>isShown(i,res)?noteName(st.round.notes[i].midi):'?';
+  function results(){return st.run?st.run.results:st.lastRes;}
+  // Чипы ступеней (с группировкой по аккордам)
+  function renderChips(cur){
+    const res=results();chips.innerHTML='';let gid=null,row=null;
+    st.round.notes.forEach((n,i)=>{
+      let target=chips;
+      if(n.group){if(gid!==n.group.id){gid=n.group.id;const g=el('div',{class:'chip-group'},el('div',{class:'chip-group-label'},n.group.label));row=el('div',{class:'chip-row'});g.append(row);chips.append(g);}target=row;if(i===cur)target.parentNode.classList.add('current');}
+      else gid=null;
+      let cls='chip';if(i===cur)cls+=' cur';if(res[i]!=null)cls+=res[i]>=80?' good':res[i]>=50?' mid':' poor';
+      target.append(el('span',{class:cls},label(i,res)+(res[i]!=null?' '+res[i]+'%':'')));
+    });
+    kb.clear();const res2=results();
+    kb.mark(st.round.notes.filter((n,i)=>isShown(i,res2)).map(n=>n.midi),'hl-soft');
+    kb.mark(st.round.notes.filter((n,i)=>res2[i]!=null).map(n=>n.midi),'hl-ok');
+    if(cur>=0&&isShown(cur,res2))kb.mark([st.round.notes[cur].midi],'hl-cur');
+  }
+  // График высоты звука
+  function draw(){
+    if(!cv.isConnected||!st.round)return;
+    const dpr=window.devicePixelRatio||1,W=cv.clientWidth||600,H=cv.clientHeight||260;
+    cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+    const css=getComputedStyle(document.documentElement),col=k=>css.getPropertyValue(k).trim();
+    const steps=st.round.notes.map(n=>n.midi),lo=Math.min(...steps)-2,hi=Math.max(...steps)+2;
+    const y=m=>H-10-(m-lo)/(hi-lo)*(H-20);
+    ctx.clearRect(0,0,W,H);ctx.font='11px "JetBrains Mono", monospace';
+    const run=st.run,res=results(),curMidi=run?steps[run.idx]:null;
+    if(run&&curMidi!=null){const tol=(PRECISION[S().precision]||PRECISION.normal).tol/100;ctx.fillStyle=col('--teal');ctx.globalAlpha=0.13;ctx.fillRect(44,y(curMidi+tol),W-44,y(curMidi-tol)-y(curMidi+tol));ctx.globalAlpha=1;}
+    [...new Set(steps)].forEach(m=>{
+      const idxs=steps.map((s,i)=>s===m?i:-1).filter(i=>i>=0);const shown=idxs.some(i=>isShown(i,res));
+      const cur=m===curMidi;ctx.strokeStyle=cur?col('--gold'):col('--muted');ctx.lineWidth=cur?2:1;ctx.globalAlpha=cur?1:0.35;
+      ctx.beginPath();ctx.moveTo(44,y(m));ctx.lineTo(W,y(m));ctx.stroke();ctx.globalAlpha=1;
+      ctx.fillStyle=cur?col('--gold'):col('--muted');ctx.fillText(shown?noteName(m):'?',6,y(m)+4);});
+    if(st.hist.length){const now=performance.now();ctx.lineWidth=3;ctx.strokeStyle=col('--teal');ctx.lineJoin='round';ctx.beginPath();let pen=false;
+      st.hist.forEach(p=>{if(p.m==null){pen=false;return;}const x=44+(1-(now-p.t)/8000)*(W-50);const yy=Math.max(2,Math.min(H-2,y(p.m)));if(!pen){ctx.moveTo(x,yy);pen=true;}else ctx.lineTo(x,yy);});ctx.stroke();
+      const last=st.hist[st.hist.length-1];if(run&&last&&last.m!=null){ctx.fillStyle=col('--gold');ctx.beginPath();ctx.arc(W-6,Math.max(6,Math.min(H-6,y(last.m))),5,0,Math.PI*2);ctx.fill();}}
+    else{ctx.fillStyle=col('--faint');ctx.fillText('Нажмите «Начать петь» — здесь появится график высоты звука',50,22);}
+  }
+  function setButtons(on){startBtn.disabled=on;stopBtn.disabled=!on;skipBtn.disabled=!on;hintBtn.disabled=!on;}
+  // Старт пения с микрофоном
+  async function start(){
+    if(st.run||!st.round)return;
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){status.textContent=window.isSecureContext?'Браузер не поддерживает доступ к микрофону.':micError(null);return;}
+    audio.unlocked=true;
+    const run={steps:st.round.notes.map(n=>n.midi),idx:0,hold:0,samples:[],results:[],last:performance.now(),ignoreUntil:0,fq:[],listening:false};
+    st.run=run;st.hist=[];result.innerHTML='';startBtn.disabled=true;status.textContent='Запрашиваем доступ к микрофону…';
+    try{await pitch.start(f=>onFrame(f));}
+    catch(e){if(st.run===run)st.run=null;setButtons(false);status.textContent=micError(e);return;}
+    if(st.run!==run){pitch.stop();return;}
+    setButtons(true);
+    const refDur=st.round.refPlay?st.round.refPlay():0;
+    run.ignoreUntil=performance.now()+(refDur?refDur*1000+400:0);run.listening=refDur>0;
+    status.innerHTML=refDur?'🎧 Слушайте тонику':'Пойте: <b>'+label(0,run.results)+'</b>';
+    renderChips(0);draw();
+  }
+  // Обработка каждого кадра анализа
+  function onFrame(fr){
+    const run=st.run;if(!run)return;
+    level.style.width=Math.min(100,fr.rms*350)+'%';
+    const now=performance.now(),dt=Math.min(0.1,(now-run.last)/1000);run.last=now;
+    const P=PRECISION[S().precision]||PRECISION.normal,target=run.steps[run.idx];
+    if(now<run.ignoreUntil){st.hist.push({t:now,m:null});trimHist(now);draw();return;}
+    if(run.listening){run.listening=false;status.innerHTML='Пойте: <b>'+label(run.idx,run.results)+'</b>';}
+    let freq=fr.freq;
+    if(freq>0){run.fq.push(freq);if(run.fq.length>5)run.fq.shift();const sorted=run.fq.slice().sort((a,b)=>a-b);freq=sorted[Math.floor(sorted.length/2)];}else run.fq=[];
+    let m=null,out=false;
+    if(freq>0){const raw=69+12*Math.log2(freq/440);if(raw<MIN_MIDI-0.5||raw>MAX_MIDI+0.5)out=true;else m=raw;}
+    if(m!=null){
+      let diff=(m-target)*100;if(S().octaveEq)diff=((diff%1200)+1800)%1200-600;
+      const ac=Math.abs(diff);
+      st.hist.push({t:now,m:target+diff/100});
+      curNote.textContent=noteName(Math.round(m))+'  '+(diff>0?'+':'')+Math.round(diff)+'¢';
+      freqEl.textContent=freq.toFixed(1)+' Гц · цель '+label(run.idx,run.results);
+      indicator.className='indicator '+(ac<=Math.min(20,P.tol*0.6)?'ok':ac<=P.tol?'mid':'bad');
+      hintEl.textContent='';
+      if(ac<=P.tol){run.hold+=dt;run.samples.push(ac);}else{run.hold=Math.max(0,run.hold-dt*1.5);if(run.hold===0)run.samples=[];}
+    }else{
+      st.hist.push({t:now,m:null});indicator.className='indicator';curNote.textContent='—';freqEl.textContent='';
+      if(out)hintEl.textContent='Нота вне диапазона C2–C5 — не засчитывается.';
+      run.hold=Math.max(0,run.hold-dt);if(run.hold===0)run.samples=[];
+    }
+    trimHist(now);
+    holdBar.style.width=Math.min(100,run.hold/P.hold*100)+'%';
+    if(run.hold>=P.hold){
+      const avg=run.samples.reduce((a,b)=>a+b,0)/Math.max(1,run.samples.length);
+      run.results[run.idx]=Math.round(Math.max(0,100-avg*2));run.idx++;run.hold=0;run.samples=[];holdBar.style.width='0%';
+      if(run.idx>=run.steps.length){draw();finish();return;}
+      renderChips(run.idx);status.innerHTML='✅ Засчитано! Следующая: <b>'+label(run.idx,run.results)+'</b>';
+    }
+    draw();
+  }
+  function trimHist(now){while(st.hist.length&&now-st.hist[0].t>8000)st.hist.shift();}
+  function skip(){const run=st.run;if(!run)return;run.results[run.idx]=0;run.idx++;run.hold=0;run.samples=[];if(run.idx>=run.steps.length){finish();return;}renderChips(run.idx);status.innerHTML='Пропущено. Следующая: <b>'+label(run.idx,run.results)+'</b>';draw();}
+  function hint(){const run=st.run;if(!run)return;audio.playNote(run.steps[run.idx],1.0);run.ignoreUntil=performance.now()+1500;run.listening=true;status.textContent='💡 Подсказка звучит…';}
+  // Завершение: точность по каждой ступени
+  function finish(){
+    const run=st.run;if(!run)return;st.lastRes=run.results.slice();stop(true);
+    const res=st.lastRes,avg=Math.round(res.reduce((a,b)=>a+b,0)/res.length);
+    renderChips(-1);draw();
+    status.innerHTML='Готово! Средняя точность: <b>'+avg+'%</b>';
+    result.innerHTML='';
+    result.append(el('div',{class:'result-box'},el('div',{class:'result-num'},avg+'%'),
+      el('p',{class:'muted small'},avg>=90?'Великолепно — очень чистая интонация!':avg>=70?'Хорошо, но есть над чем поработать.':'Пойте медленнее и чаще слушайте опору.'),
+      el('div',{class:'table-wrap'},el('table',{},el('thead',{},el('tr',{},el('th',{},'№'),el('th',{},'Нота'),el('th',{},'Точность'))),
+        el('tbody',{},st.round.notes.map((n,i)=>el('tr',{},el('td',{},String(i+1)),el('td',{},noteName(n.midi)+(n.group?' · '+n.group.label:'')),el('td',{},res[i]+'%'))))))));
+  }
+  function stop(finished){pitch.stop();const was=!!st.run;st.run=null;setButtons(false);indicator.className='indicator';curNote.textContent='—';freqEl.textContent='';hintEl.textContent='';level.style.width='0%';holdBar.style.width='0%';if(was&&!finished){status.textContent='Остановлено.';if(st.round)renderChips(-1);}draw();}
+  return {
+    setRound(r){if(st.run)stop(false);st.round=r;st.hist=[];st.lastRes=[];title.textContent=r.title;sub.textContent=r.sub;result.innerHTML='';status.textContent='Нажмите «Прослушать», затем «Начать петь».';renderChips(-1);requestAnimationFrame(draw);},
+    destroy(){stop(true);window.removeEventListener('resize',onResize);}
+  };
+}
+
+// Карточка настроек анализатора и звука
+function micSettingsCard(){const s=S();return el('details',{class:'card'},el('summary',{},'🎛 Настройки анализатора и звука'),
+  el('div',{class:'grid-ctl',style:'margin-top:14px'},
+    fSel('Точность распознавания',Object.entries(PRECISION).map(([k,v])=>[k,v.name]),s.precision,v=>{s.precision=v;storage.save();}),
+    fRange('Порог шума',0,60,s.threshold,v=>{s.threshold=v;storage.save();}),
+    fRange('Громкость фортепиано',0,100,s.volume,v=>{s.volume=v;audio.setVolume();storage.save();}),
+    fToggle('Октава не важна (голос любого регистра)',s.octaveEq,v=>{s.octaveEq=v;storage.save();}),
+    fToggle('Арпеджио при прослушивании аккордов',s.arp,v=>{s.arp=v;storage.save();})),
+  el('p',{class:'hint-line'},'🎧 Пойте в наушниках, чтобы фортепиано не попадало в микрофон. '+RANGE_TEXT));}
+
+/* ===================== КОНСТРУКТОР СТРАНИЦ ПЕНИЯ ===================== */
+function makeSingView(cfg){return {
+  render(root){
+    const o=S().sing[cfg.id];
+    root.append(pageHead(cfg.eyebrow,cfg.title,cfg.desc+' '+RANGE_TEXT));
+    const ctl=el('div',{class:'grid-ctl'});root.append(el('div',{class:'card'},el('h3',{},'⚙️ Настройки задания'),ctl));
+    let an=null,round=null;
+    const regen=()=>{round=cfg.build();an.setRound(round);};
+    const refresh=()=>{storage.save();renderCtl();regen();};
+    function renderCtl(){ctl.innerHTML='';cfg.controls(o,refresh).forEach(x=>{if(x)ctl.append(x);});}
+    renderCtl();
+    if(cfg.extra)root.append(cfg.extra(()=>round));
+    an=createAnalyzer(root,{onNew:regen});
+    root.append(micSettingsCard());
+    regen();this._an=an;
+  },
+  destroy(){if(this._an)this._an.destroy();this._an=null;}
+};}
+const tonicOptions=()=>NOTE_NAMES.map((n,i)=>[i,n+' · '+RU_NAMES[i]]);
+
+const singScalesView=makeSingView({id:'scales',eyebrow:'Пение · вокальная интонация',title:'Пение гамм',
+  desc:'Три режима: пение в тональности, пение в ладу и пение полной гаммы. Октава подбирается автоматически.',
+  build:buildScaleRound,
+  controls(o,refresh){return [
+    fSel('Режим',[['inkey','Пение в тональности'],['inmode','Пение в ладу'],['full','Пение гаммы']],o.mode,v=>{o.mode=v;refresh();}),
+    fSel('Тоника',tonicOptions(),o.tonic,v=>{o.tonic=+v;refresh();}),
+    o.mode==='inkey'?fSel('Тональность',KEY_TYPES,o.key,v=>{o.key=v;refresh();}):fSel('Лад / гамма',SCALES.map(s=>[s.id,s.name]),o.scale,v=>{o.scale=v;refresh();}),
+    fSel('Октава',[[2,'2 (от C2)'],[3,'3 (от C3)'],[4,'4 (от C4)']],o.oct,v=>{o.oct=+v;refresh();}),
+    fSel('Направление',[['up','Вверх'],['down','Вниз'],['updown','Вверх-вниз']],o.dir,v=>{o.dir=v;refresh();}),
+    o.mode!=='full'?fSel('Ступеней',[[5,'5'],[7,'7'],[10,'10']],o.steps,v=>{o.steps=+v;refresh();}):null,
+    o.mode!=='full'?fSel('Порядок ступеней',[['seq','По порядку'],['rand','Случайный (мелодия)']],o.order,v=>{o.order=v;refresh();}):null,
+    fToggle('Услышать тонику',o.anchor,v=>{o.anchor=v;refresh();})];},
+  extra(getRound){return el('div',{class:'card'},el('h3',{},'🎹 Под аккомпанемент'),el('p',{class:'muted small'},'Сайт играет опору — пойте гамму самостоятельно или вместе с анализатором.'),
+    el('div',{class:'row'},
+      el('button',{class:'btn btn-sm',onclick:()=>audio.playNote(getRound().tonic,2.5)},'🔊 Тоника'),
+      el('button',{class:'btn btn-sm',onclick:()=>audio.playChord(getRound().triad,2.5)},'🔊 Тоническое трезвучие'),
+      el('button',{class:'btn btn-sm',onclick:()=>{const t=getRound().tonic;audio.playNote(t,6,0,0.5);audio.playNote(clampMidi(t+7),6,0,0.35);}},'🔊 Бурдон T + D (6 с)')));}
+});
+const singIntervalsView=makeSingView({id:'intervals',eyebrow:'Пение · интервалы',title:'Пение интервалов',
+  desc:'Сыграется опорный звук. Спойте его, затем — заданный интервал вверх или вниз.',
+  build:buildIntervalRound,
+  controls(o,refresh){return [
+    fSel('Интервал',[['rand','Случайный']].concat(Object.entries(INTERVAL_FULL)),o.interval,v=>{o.interval=v;refresh();}),
+    fSel('Направление',[['up','Вверх'],['down','Вниз'],['rand','Случайно']],o.dir,v=>{o.dir=v;refresh();}),
+    fToggle('Скрыть целевую ноту',o.hide,v=>{o.hide=v;refresh();})];}
+});
+function chordControls(kind){return function(o,refresh){const invs=kind==='triads'?TRIAD_INV:SEV_INV;return [
+  fSel('Тоника',tonicOptions(),o.tonic,v=>{o.tonic=+v;refresh();}),
+  fSel('Октава',[[2,'2 (от C2)'],[3,'3 (от C3)']],o.oct,v=>{o.oct=+v;refresh();}),
+  fSel('Лад',HEPTA.map(s=>[s.id,s.name]),o.scale,v=>{o.scale=v;refresh();}),
+  o.chain?null:fSel('Ступень',ROMAN.map((r,i)=>[i,r+' ступень']),o.degree,v=>{o.degree=+v;refresh();}),
+  fSel('Обращение',invs.map((n,i)=>[i,n]).concat([['rand','Случайное']]),o.inv,v=>{o.inv=v;refresh();}),
+  fToggle('Цепочка аккордов (случайная, от I ступени)',o.chain,v=>{o.chain=v;refresh();}),
+  o.chain?fSel('Длина цепочки',[[2,'2'],[3,'3'],[4,'4'],[5,'5']],o.len,v=>{o.len=+v;refresh();}):null,
+  fToggle('Опора: тоническое трезвучие',o.anchor,v=>{o.anchor=v;refresh();})];};}
+const singTriadsView=makeSingView({id:'triads',eyebrow:'Пение · трезвучия',title:'Трезвучия и цепочки',
+  desc:'Трезвучия всех ступеней в тональности или ладу, обращения 5/3 – 6 – 6/4 и случайные цепочки.',
+  build:()=>buildChordRound('triads'),controls:chordControls('triads')});
+const singSeventhsView=makeSingView({id:'sevenths',eyebrow:'Пение · септаккорды',title:'Септаккорды и цепочки',
+  desc:'Диатонические септаккорды, обращения 7 – 6/5 – 4/3 – 2 и цепочки в тональности или ладу.',
+  build:()=>buildChordRound('sevenths'),controls:chordControls('sevenths')});
+
+/* ===================== СЛУХОВОЙ АНАЛИЗ: ВИКТОРИНА ===================== */
+function createQuiz(parent,cfg){
+  let task=null,answered=false;
+  const title=el('div',{class:'quiz-title'}),badge=el('span',{class:'badge'}),opts=el('div',{class:'options'}),fb=el('div',{class:'feedback'});
+  const playBtn=el('button',{class:'btn btn-gold',onclick:()=>{audio.unlocked=true;if(task)task.play();}},'🔊 Повторить звук');
+  const nextBtn=el('button',{class:'btn',onclick:()=>start()},'Следующее →');
+  parent.append(el('div',{class:'card'},el('div',{class:'row between'},title,badge),el('div',{class:'row'},playBtn,nextBtn),opts,fb));
+  const setBadge=()=>{badge.textContent=cfg.badge?cfg.badge():'';};
+  // Новое задание
+  function start(){task=cfg.generate();answered=false;fb.textContent='';fb.className='feedback';opts.innerHTML='';setBadge();
+    title.textContent=task.title;
+    task.options.forEach(o=>opts.append(el('button',{class:'btn opt','data-id':o.id,onclick:()=>answer(o.id)},o.label)));
+    if(audio.unlocked)setTimeout(()=>task.play(),250);else fb.textContent='Нажмите «Повторить звук», чтобы услышать задание.';}
+  // Проверка ответа
+  function answer(id){if(answered||!task)return;answered=true;const ok=id===task.answer;
+    [...opts.children].forEach(b=>{const bid=b.dataset.id;if(bid===task.answer)b.classList.add('correct');else if(bid===id)b.classList.add('wrong');else b.classList.add('dim');});
+    const lbl=(task.options.find(o=>o.id===task.answer)||{}).label;
+    fb.textContent=ok?'✅ Верно! '+(task.explain||''):`❌ Неверно. Правильный ответ: ${lbl}. ${task.explain||''}`;fb.classList.add(ok?'ok':'bad');
+    if(cfg.onAnswer)cfg.onAnswer(ok,task);setBadge();}
+  return {start};
+}
+function recordEar(id,key,ok){const s=S().earStats[id];if(ok){s.streak++;s.best=Math.max(s.best,s.streak);}else s.streak=0;s.per=s.per||{};const p=s.per[key]||(s.per[key]={asked:0,correct:0});p.asked++;if(ok)p.correct++;storage.save();}
+
+function makeEarView(cfg){return {render(root){
+  const o=S().ear[cfg.id],stt=S().earStats[cfg.id];
+  root.append(pageHead(cfg.eyebrow,cfg.title,cfg.desc+' '+RANGE_TEXT));
+  const ctl=el('div',{class:'grid-ctl'});root.append(el('div',{class:'card'},el('h3',{},'⚙️ Настройки'),ctl));
+  let quiz=null;
+  const restart=()=>{storage.save();renderCtl();quiz.start();};
+  function renderCtl(){ctl.innerHTML='';cfg.controls(o,restart).forEach(x=>{if(x)ctl.append(x);});}
+  renderCtl();
+  const tbody=el('tbody');
+  quiz=createQuiz(root,{generate:()=>cfg.gen(o),badge:()=>`Серия: ${stt.streak} · лучшая: ${stt.best}`,onAnswer:(ok,t)=>{recordEar(cfg.id,t.key,ok);renderTable();}});
+  root.append(el('div',{class:'card'},el('h3',{},cfg.tableTitle),el('div',{class:'table-wrap'},el('table',{},el('thead',{},el('tr',{},el('th',{},'Вариант'),el('th',{},'Заданий'),el('th',{},'Верно'),el('th',{},'Точность'))),tbody))));
+  function renderTable(){tbody.innerHTML='';const per=stt.per||{};cfg.tableRows().forEach(name=>{const p=per[name]||{asked:0,correct:0};const a=p.asked?Math.round(p.correct/p.asked*100):0;
+    tbody.append(el('tr',{},el('td',{},name),el('td',{},String(p.asked)),el('td',{},String(p.correct)),el('td',{},el('div',{class:'row',style:'margin:0;flex-direction:row;align-items:center'},el('div',{class:'bar'},el('i',{style:`width:${a}%`})),el('span',{class:'small'},p.asked?a+'%':'—')))));});}
+  renderTable();quiz.start();
+}};}
+
+// Задание на интервал: обе ноты в C2–C5
+function genEarInterval(o){const pool=INTERVALS.filter(i=>LEVELS[o.level].includes(i.id));const iv=rnd(pool);
+  const root=randInt(Math.max(MIN_MIDI,40),Math.min(MAX_MIDI-iv.semi,64));
+  const dir=o.dir==='mixed'?rnd(['asc','desc']):o.dir,lo=root,hi=root+iv.semi;
+  const play=o.mode==='harmonic'?()=>audio.playChord([lo,hi],1.8):()=>audio.playSequence(dir==='asc'?[lo,hi]:[hi,lo],0.75,0.9);
+  return {key:iv.name,answer:iv.id,options:pool.map(i=>({id:i.id,label:i.name})),play,
+    title:'Какой это интервал?'+(o.mode==='harmonic'?' (гармонически)':dir==='asc'?' (восходящий)':' (нисходящий)'),explain:`${iv.name}: ${noteName(lo)} – ${noteName(hi)}.`};}
+
+const EAR_SCALE_POOLS={basic:['major','minor','harmminor','melminor'],ext:['major','minor','harmminor','melminor','harmmajor','melmajor','pentmaj','pentmin','bluesmaj','bluesmin'],
+  all:['major','minor','harmminor','melminor','harmmajor','melmajor','pentmaj','pentmin','bluesmaj','bluesmin','whole','dimhw','dimwh','chrom','dbharmmajor','doubleaug']};
+// Ноты гаммы вверх (и вниз — для мелодических видов всегда, т.к. они различаются нисходящей частью)
+function scaleTones(sc,tonic,updown){const up=sc.steps.concat([12]).map(s=>tonic+s);if(!updown&&!sc.down)return up;const down=(sc.down||sc.steps).concat([12]).map(s=>tonic+s).reverse().slice(1);return up.concat(down);}
+function genEarScale(o){const pool=EAR_SCALE_POOLS[o.level].map(scaleById);const sc=rnd(pool);const tonic=randInt(48,58);
+  const tones=scaleTones(sc,tonic,o.dir==='updown');
+  return {key:sc.name,answer:sc.id,options:pool.map(s=>({id:s.id,label:s.name})),title:'Какая это гамма?',
+    play(){if(o.drone)audio.playNote(tonic-12,tones.length*0.42+1,0,0.4);audio.playSequence(tones,0.42,0.55,0.1);},
+    explain:`${sc.name} от ${NOTE_NAMES[tonic%12]}: ${tones.map(noteName).join(' ')}${sc.down?' (различается нисходящей частью)':''}.`};}
+
+const MODE_NAMES={major:'Ионийский',dorian:'Дорийский',phrygian:'Фригийский',lydian:'Лидийский',mixolydian:'Миксолидийский',minor:'Эолийский',locrian:'Локрийский'};
+const EAR_MODE_POOLS={simple:['major','minor','dorian','mixolydian'],medium:['major','minor','dorian','mixolydian','lydian','phrygian'],all:['major','dorian','phrygian','lydian','mixolydian','minor','locrian']};
+function genEarMode(o){const pool=EAR_MODE_POOLS[o.level];const id=rnd(pool),sc=scaleById(id),tonic=randInt(48,58);
+  const tones=scaleTones(sc,tonic,true);
+  return {key:MODE_NAMES[id],answer:id,options:pool.map(x=>({id:x,label:MODE_NAMES[x]})),title:'Какой это лад?',
+    play(){const len=tones.length*0.42+1.2;if(o.drone){audio.playNote(tonic-12,len,0,0.42);audio.playNote(tonic-5,len,0,0.28);}audio.playSequence(tones,0.42,0.55,0.15);audio.playChord([tonic,tonic+sc.steps[2],tonic+sc.steps[4]],1.4,tones.length*0.42+0.3);},
+    explain:`${MODE_NAMES[id]} от ${NOTE_NAMES[tonic%12]}: ${tones.slice(0,8).map(noteName).join(' ')}.`};}
+
+const keyName=(pc,minor)=>minor?NOTE_NAMES[pc].toLowerCase()+'-moll':NOTE_NAMES[pc]+'-dur';
+// Каденция T–S–D–T в тональности (все ноты в C2–C5)
+function playCadence(pc,minor,when){const t=48+pc,th=minor?3:4,sx=minor?8:9;
+  const chords=[[t-12,t,t+th,t+7],[t-7,t,t+5,t+sx],[t-5,t-1,t+2,t+7],[t-12,t,t+th,t+7]];
+  chords.forEach((c,i)=>audio.playChord(c,i===3?1.6:0.8,when+i*0.9));audio.playNote(t,1.4,when+3.9,0.6);}
+function genEarKey(o){const pc=randInt(0,11);
+  if(o.level==='mode'){const minor=Math.random()<0.5;
+    return {key:minor?'Минор':'Мажор',answer:minor?'min':'maj',options:[{id:'maj',label:'Мажор'},{id:'min',label:'Минор'}],title:'Мажор или минор?',
+      play(){playCadence(pc,minor,0.05);},explain:`Тональность ${keyName(pc,minor)} (${RU_NAMES[pc]} ${minor?'минор':'мажор'}).`};}
+  const minor=o.level==='all'?Math.random()<0.5:false;
+  const options=[];for(let i=0;i<12;i++)options.push({id:'M'+i,label:keyName(i,false)});if(o.level==='all')for(let i=0;i<12;i++)options.push({id:'m'+i,label:keyName(i,true)});
+  return {key:keyName(pc,minor),answer:(minor?'m':'M')+pc,options,title:'Определите тональность (после эталона C4)',
+    play(){audio.playNote(60,1.2,0,0.7);playCadence(pc,minor,1.7);},explain:`Эталон — C4 (до первой октавы). Звучала ${keyName(pc,minor)} (${RU_NAMES[pc]} ${minor?'минор':'мажор'}).`};}
+
+const earIntervalsView=makeEarView({id:'intervals',eyebrow:'Слуховой анализ',title:'Интервалы на слух',desc:'Послушайте два звука и определите интервал.',
+  controls(o,restart){return [
+    fSel('Способ',[['melodic','Мелодически (последовательно)'],['harmonic','Гармонически (одновременно)']],o.mode,v=>{o.mode=v;restart();}),
+    fSel('Направление (мелодически)',[['asc','Восходящие'],['desc','Нисходящие'],['mixed','Смешанные']],o.dir,v=>{o.dir=v;restart();}),
+    fSel('Сложность',[['simple','Простые'],['medium','Средние'],['all','Все']],o.level,v=>{o.level=v;restart();})];},
+  gen:genEarInterval,tableTitle:'Точность по интервалам',tableRows:()=>INTERVALS.map(i=>i.name)});
+const earScalesView=makeEarView({id:'scales',eyebrow:'Слуховой анализ',title:'Гаммы на слух',desc:'Прозвучит гамма от случайной тоники — определите её вид.',
+  controls(o,restart){return [
+    fSel('Набор гамм',[['basic','Базовый: мажор и три вида минора'],['ext','Расширенный: + гарм./мел. мажор, пентатоники, блюз'],['all','Все: + целотонная, уменьшённые, хроматическая и др.']],o.level,v=>{o.level=v;restart();}),
+    fSel('Направление',[['up','Вверх'],['updown','Вверх-вниз']],o.dir,v=>{o.dir=v;restart();}),
+    fToggle('Бурдон тоники',o.drone,v=>{o.drone=v;restart();})];},
+  gen:genEarScale,tableTitle:'Точность по гаммам',tableRows:()=>EAR_SCALE_POOLS.all.map(id=>scaleById(id).name)});
+const earModesView=makeEarView({id:'modes',eyebrow:'Слуховой анализ',title:'Лады на слух',desc:'Прозвучит диатонический лад вверх-вниз и тоническое трезвучие — определите лад.',
+  controls(o,restart){return [
+    fSel('Сложность',[['simple','Простые: ионийский, эолийский, дорийский, миксолидийский'],['medium','Средние: + лидийский, фригийский'],['all','Все 7 ладов']],o.level,v=>{o.level=v;restart();}),
+    fToggle('Бурдон (тоника + квинта)',o.drone,v=>{o.drone=v;restart();})];},
+  gen:genEarMode,tableTitle:'Точность по ладам',tableRows:()=>EAR_MODE_POOLS.all.map(id=>MODE_NAMES[id])});
+const earKeysView=makeEarView({id:'keys',eyebrow:'Слуховой анализ',title:'Тональности на слух',desc:'Прозвучит каденция T–S–D–T. Определите наклонение или саму тональность относительно эталона C4.',
+  controls(o,restart){return [
+    fSel('Задание',[['mode','Мажор или минор'],['major','12 мажорных тональностей (эталон C4)'],['all','Все 24 тональности (эталон C4)']],o.level,v=>{o.level=v;restart();})];},
+  gen:genEarKey,tableTitle:'Точность по тональностям',tableRows:()=>{const S2=S().ear.keys.level;if(S2==='mode')return ['Мажор','Минор'];const r=[];for(let i=0;i<12;i++)r.push(keyName(i,false));if(S2==='all')for(let i=0;i<12;i++)r.push(keyName(i,true));return r;}});
+
+/* ===================== ГЛАВНОЕ МЕНЮ ===================== */
+const homeView={render(root){
+  root.append(el('section',{class:'hero'},el('div',{class:'eyebrow'},'♪ Практика интонации и слуха'),
+    el('h1',{html:'Тренажёр<br><span>музыкального слуха</span>'}),
+    el('p',{class:'lead'},'Пой гаммы, интервалы, трезвучия и септаккорды — анализатор слышит голос через микрофон и показывает точность в центах. '+RANGE_TEXT)));
+  const tile=(id,ico,t,d,mc)=>el('div',{class:'tile',style:`--mc:${mc}`,onclick:()=>router.go(id)},el('div',{class:'ico'},ico),el('b',{},t),el('p',{},d));
+  root.append(el('div',{class:'group-title'},'🎤 Пение с анализатором'),el('div',{class:'tiles'},
+    tile('scales','🎼','Пение гамм','В тональности, в ладу или полная гамма · 25 ладов','var(--gold)'),
+    tile('intervals','↕️','Пение интервалов','От м2 до октавы, вверх и вниз','var(--blue)'),
+    tile('triads','🎹','Трезвучия и цепочки','Обращения 5/3 – 6 – 6/4, цепочки в ладу','var(--violet)'),
+    tile('sevenths','🎶','Септаккорды и цепочки','Обращения 7 – 6/5 – 4/3 – 2, цепочки','var(--magenta)')));
+  root.append(el('div',{class:'group-title'},'👂 Слуховой анализ'),el('div',{class:'tiles'},
+    tile('earIntervals','🎚️','Интервалы на слух','Мелодически и гармонически, 3 уровня','var(--blue)'),
+    tile('earScales','🎵','Гаммы на слух','Мажор, виды минора, пентатоники, блюз и др.','var(--gold)'),
+    tile('earModes','🌈','Лады на слух','Ионийский … локрийский','var(--teal)'),
+    tile('earKeys','🗝️','Тональности на слух','Мажор/минор и 24 тональности по каденции','var(--magenta)')));
+}};
+
+/* ===================== РОУТЕР (SPA без перезагрузки) ===================== */
+const ROUTES=[['home','Меню',homeView],['scales','Гаммы',singScalesView],['intervals','Интервалы',singIntervalsView],['triads','Трезвучия',singTriadsView],['sevenths','Септаккорды',singSeventhsView],
+  ['earIntervals','Слух: интервалы',earIntervalsView],['earScales','Слух: гаммы',earScalesView],['earModes','Слух: лады',earModesView],['earKeys','Слух: тональности',earKeysView]];
+const router={views:{},current:null,name:null,
+  go(name){const v=this.views[name]||this.views.home;if(!this.views[name])name='home';
+    if(this.current&&this.current.destroy)this.current.destroy();
+    const root=$('#view');root.innerHTML='';this.current=v;this.name=name;v.render(root);window.scrollTo({top:0});
+    if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
+    document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));}
+};
+
+/* ===================== ИНИЦИАЛИЗАЦИЯ ===================== */
+function applyTheme(t){document.documentElement.dataset.theme=t;$('#themeBtn').textContent=t==='dark'?'🌙':'☀️';S().theme=t;storage.save();}
+function applySound(){$('#soundBtn').textContent=S().muted?'🔇':'🔊';audio.setVolume();}
+function init(){
+  storage.load();applyTheme(S().theme||'dark');applySound();
+  // Звук разрешается только после первого клика пользователя
+  document.addEventListener('pointerdown',()=>{audio.init();audio.unlocked=true;},{once:true});
+  $('#themeBtn').addEventListener('click',()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'));
+  $('#soundBtn').addEventListener('click',()=>{S().muted=!S().muted;storage.save();applySound();});
+  $('#brand').addEventListener('click',()=>router.go('home'));
+  const nav=$('#nav');
+  ROUTES.forEach(([id,label,view])=>{router.views[id]=view;nav.append(el('button',{'data-view':id,onclick:()=>router.go(id)},label));});
+  router.go((location.hash||'#home').slice(1));
+  window.addEventListener('hashchange',()=>{const n=location.hash.slice(1);if(router.views[n]&&router.name!==n)router.go(n);});
+}
+init();
+</script>
+</body>
+</html>
