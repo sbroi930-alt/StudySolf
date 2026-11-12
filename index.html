@@ -612,7 +612,7 @@ function createAnalyzer(parent,opts){
     holdBar.style.width=Math.min(100,run.hold/P.hold*100)+'%';
     if(run.hold>=P.hold){
       const avg=run.samples.reduce((a,b)=>a+b,0)/Math.max(1,run.samples.length);
-      run.results[run.idx]=Math.round(Math.max(0,100-avg*2));run.idx++;run.hold=0;run.samples=[];holdBar.style.width='0%';
+      run.results[run.idx]=100;run.idx++;run.hold=0;run.samples=[];holdBar.style.width='0%';
       if(run.idx>=run.steps.length){draw();finish();return;}
       renderChips(run.idx);status.innerHTML='✅ Засчитано! Следующая: <b>'+label(run.idx,run.results)+'</b>';
     }
