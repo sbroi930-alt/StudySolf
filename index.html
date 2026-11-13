@@ -734,7 +734,6 @@ function createQuiz(parent,cfg){
   title.textContent=task.title;
   task.options.forEach(o=>opts.append(el('button',{class:'btn opt','data-id':o.id,onclick:()=>answer(o.id)},o.label)));
                   }
-  // Проверка ответа
   function answer(id){if(answered||!task)return;answered=true;const ok=id===task.answer;
     [...opts.children].forEach(b=>{const bid=b.dataset.id;if(bid===task.answer)b.classList.add('correct');else if(bid===id)b.classList.add('wrong');else b.classList.add('dim');});
     const lbl=(task.options.find(o=>o.id===task.answer)||{}).label;
