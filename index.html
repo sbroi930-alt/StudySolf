@@ -716,15 +716,24 @@ const singSeventhsView=makeSingView({id:'sevenths',eyebrow:'Пение · сеп
 function createQuiz(parent,cfg){
   let task=null,answered=false;
   const title=el('div',{class:'quiz-title'}),badge=el('span',{class:'badge'}),opts=el('div',{class:'options'}),fb=el('div',{class:'feedback'});
-  const playBtn=el('button',{class:'btn btn-gold',onclick:()=>{audio.unlocked=true;if(task)task.play();}},'🔊 Повторить звук');
+  const playBtn=el('button',{class:'btn btn-gold',onclick:()=>{
+  audio.unlocked=true;audio.init();
+  if(task){
+    task.play();
+    playBtn.textContent='🔊 Повторить звук';
+    if(fb.textContent==='Нажмите «▶ Начать играть», чтобы услышать задание.')fb.textContent='';
+  }
+}},'▶ Начать играть');
   const nextBtn=el('button',{class:'btn',onclick:()=>start()},'Следующее →');
   parent.append(el('div',{class:'card'},el('div',{class:'row between'},title,badge),el('div',{class:'row'},playBtn,nextBtn),opts,fb));
   const setBadge=()=>{badge.textContent=cfg.badge?cfg.badge():'';};
   // Новое задание
-  function start(){task=cfg.generate();answered=false;fb.textContent='';fb.className='feedback';opts.innerHTML='';setBadge();
-    title.textContent=task.title;
-    task.options.forEach(o=>opts.append(el('button',{class:'btn opt','data-id':o.id,onclick:()=>answer(o.id)},o.label)));
-    if(audio.unlocked)setTimeout(()=>task.play(),250);else fb.textContent='Нажмите «Повторить звук», чтобы услышать задание.';}
+  function start(){task=cfg.generate();answered=false;
+  fb.textContent='Нажмите «▶ Начать играть», чтобы услышать задание.';
+  fb.className='feedback';opts.innerHTML='';setBadge();playBtn.textContent='▶ Начать играть';
+  title.textContent=task.title;
+  task.options.forEach(o=>opts.append(el('button',{class:'btn opt','data-id':o.id,onclick:()=>answer(o.id)},o.label)));
+                  }
   // Проверка ответа
   function answer(id){if(answered||!task)return;answered=true;const ok=id===task.answer;
     [...opts.children].forEach(b=>{const bid=b.dataset.id;if(bid===task.answer)b.classList.add('correct');else if(bid===id)b.classList.add('wrong');else b.classList.add('dim');});
