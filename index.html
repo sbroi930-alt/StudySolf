@@ -874,5 +874,685 @@ function init(){
 }
 init();
 </script>
+<!-- ════════════════════════════════════════════════════════════════════
+     StudySolf · Модуль «Сброс статистики во всех режимах»
+     Вставить целиком перед </body>. Зависимостей нет.
+     ════════════════════════════════════════════════════════════════════ -->
+<style>
+  /* ── Палитра модуля: сцена StudySolf (фиолетовая сцена, янтарь клавиш,
+       алый — разрушительное действие, мята — спасение/отмена) ── */
+  .ssr-dark{
+    --ssr-bg:#0f0a1e; --ssr-sur:#191134; --ssr-sur2:#231a48; --ssr-line:#3b2c6e;
+    --ssr-ink:#f1ebff; --ssr-mut:#a99cd6; --ssr-vio:#7c5cff; --ssr-vio2:#4b2fd0;
+    --ssr-amber:#ffb02e; --ssr-danger:#ff4d6d; --ssr-danger2:#c9184a;
+    --ssr-ok:#3ddc97; --ssr-info:#38e1ff; --ssr-ivory:#f6ecd9; --ssr-scrim:rgba(7,4,17,.66);
+  }
+  .ssr-light{
+    --ssr-bg:#f4efff; --ssr-sur:#ffffff; --ssr-sur2:#f3edff; --ssr-line:#d9ccf3;
+    --ssr-ink:#251a49; --ssr-mut:#6e6198; --ssr-vio:#6a48f0; --ssr-vio2:#4b2fd0;
+    --ssr-amber:#9a5b00; --ssr-danger:#e11d48; --ssr-danger2:#9f1239;
+    --ssr-ok:#0c9d6c; --ssr-info:#0e7490; --ssr-ivory:#fff7e8; --ssr-scrim:rgba(37,26,73,.38);
+  }
+
+  /* ── Кнопка ── */
+  .ssr-btn{
+    display:inline-flex; align-items:center; gap:7px;
+    font:600 12.5px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--ssr-mut); background:color-mix(in srgb,var(--ssr-sur) 72%,transparent);
+    border:1px solid var(--ssr-line); border-radius:999px; padding:7px 12px;
+    cursor:pointer; transition:color .18s,border-color .18s,box-shadow .2s,transform .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .ssr-btn svg{width:15px;height:15px;color:var(--ssr-amber);transition:transform .3s,color .18s;flex:none}
+  .ssr-btn:hover{
+    color:var(--ssr-danger);
+    border-color:color-mix(in srgb,var(--ssr-danger) 55%,var(--ssr-line));
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--ssr-danger) 14%,transparent),
+               0 4px 18px color-mix(in srgb,var(--ssr-danger) 22%,transparent);
+  }
+  .ssr-btn:hover svg{transform:rotate(-70deg);color:var(--ssr-danger)}
+  .ssr-btn:active{transform:scale(.96)}
+  .ssr-btn:focus-visible{outline:2px solid var(--ssr-info);outline-offset:2px}
+  .ssr-btn.ssr-dock{
+    position:fixed; left:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:9990;
+    font-size:13px; padding:11px 16px; color:var(--ssr-ink);
+    background:linear-gradient(160deg,var(--ssr-sur2),var(--ssr-sur));
+    box-shadow:0 12px 32px rgba(0,0,0,.35);
+  }
+  @media (max-width:640px){
+    .ssr-btn.in-header span{display:none}
+    .ssr-btn.in-header{padding:8px}
+  }
+
+  /* ── Затемнение и диалог ── */
+  .ssr-scrim{
+    position:fixed; inset:0; z-index:99990; display:flex; align-items:center; justify-content:center;
+    padding:18px; opacity:0; transition:opacity .22s;
+    background:radial-gradient(900px 480px at 50% -10%,color-mix(in srgb,var(--ssr-vio) 22%,transparent),transparent 60%),var(--ssr-scrim);
+    backdrop-filter:blur(7px) saturate(1.15); -webkit-backdrop-filter:blur(7px) saturate(1.15);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .ssr-scrim[hidden]{display:none}
+  .ssr-scrim.open{opacity:1}
+  .ssr-dialog{
+    width:min(560px,100%); max-height:86vh; display:flex; flex-direction:column; overflow:hidden;
+    color:var(--ssr-ink); border:1px solid var(--ssr-line); border-radius:20px;
+    background:radial-gradient(420px 200px at 12% -8%,color-mix(in srgb,var(--ssr-vio) 16%,transparent),transparent 70%),
+               linear-gradient(165deg,var(--ssr-sur2),var(--ssr-sur) 58%);
+    box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 1px color-mix(in srgb,var(--ssr-vio) 12%,transparent);
+    transform:translateY(14px) scale(.965);
+    transition:transform .26s cubic-bezier(.2,.9,.25,1.15);
+  }
+  .ssr-scrim.open .ssr-dialog{transform:none}
+  .ssr-accent{
+    height:4px; flex:none;
+    background:linear-gradient(90deg,var(--ssr-vio),var(--ssr-info),var(--ssr-amber),var(--ssr-danger),var(--ssr-vio));
+    background-size:300% 100%; animation:ssr-flow 8s linear infinite;
+  }
+  @keyframes ssr-flow{to{background-position:300% 0}}
+
+  .ssr-head{display:grid; grid-template-columns:44px 1fr 32px; gap:14px; padding:18px 18px 12px; align-items:start}
+  .ssr-head-icon{
+    width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--ssr-vio),var(--ssr-danger));
+    box-shadow:0 6px 18px color-mix(in srgb,var(--ssr-vio) 35%,transparent);
+  }
+  .ssr-head-icon svg{width:22px;height:22px;color:var(--ssr-ivory)}
+  .ssr-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:.01em}
+  .ssr-sub{margin:3px 0 0;font-size:12.5px;line-height:1.5;color:var(--ssr-mut)}
+  .ssr-x{
+    width:32px;height:32px;border-radius:10px;border:1px solid transparent;background:none;
+    color:var(--ssr-mut);cursor:pointer;display:grid;place-items:center;transition:.15s;
+  }
+  .ssr-x:hover{background:var(--ssr-sur2);color:var(--ssr-ink)}
+  .ssr-x svg{width:15px;height:15px}
+  .ssr-x:focus-visible,.ssr-ghost:focus-visible,.ssr-link:focus-visible,
+  .ssr-hold:focus-visible,.ssr-toast button:focus-visible{outline:2px solid var(--ssr-info);outline-offset:2px}
+
+  /* ── Список найденных записей (скролл в палитре модуля) ── */
+  .ssr-body{padding:0 10px; min-height:90px}
+  .ssr-list{max-height:min(46vh,380px); overflow-y:auto; padding:6px; scrollbar-width:thin;
+    scrollbar-color:var(--ssr-vio) var(--ssr-sur2)}
+  .ssr-list::-webkit-scrollbar{width:10px}
+  .ssr-list::-webkit-scrollbar-track{background:var(--ssr-sur2);border-radius:8px}
+  .ssr-list::-webkit-scrollbar-thumb{
+    background:linear-gradient(180deg,var(--ssr-vio),var(--ssr-danger));
+    border-radius:8px;border:2px solid var(--ssr-sur2);
+  }
+  .ssr-list::-webkit-scrollbar-thumb:hover{background:var(--ssr-amber)}
+  .ssr-group{
+    position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px;
+    background:var(--ssr-sur2); border-radius:8px; padding:7px 10px; margin:4px 0;
+    font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--ssr-mut);
+  }
+  .ssr-group b{
+    margin-left:auto; font-size:10px; padding:2px 7px; border-radius:999px;
+    background:color-mix(in srgb,var(--ssr-vio) 18%,transparent); color:var(--ssr-vio);
+    border:1px solid color-mix(in srgb,var(--ssr-vio) 30%,transparent);
+  }
+  .ssr-light .ssr-group b{color:var(--ssr-vio2)}
+  .ssr-row{display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; cursor:pointer; transition:background .15s,opacity .15s}
+  .ssr-row:hover{background:color-mix(in srgb,var(--ssr-sur2) 70%,transparent)}
+  .ssr-row:has(input:not(:checked)){opacity:.5}
+  .ssr-row input{
+    appearance:none; -webkit-appearance:none; width:18px; height:18px; flex:none; margin:0;
+    border:1.5px solid var(--ssr-line); border-radius:5px; background:var(--ssr-sur);
+    display:grid; place-content:center; cursor:pointer; transition:.15s;
+  }
+  .ssr-row input:checked{background:linear-gradient(135deg,var(--ssr-danger2),var(--ssr-danger));border-color:var(--ssr-danger)}
+  .ssr-row input:checked::after{
+    content:''; width:10px; height:10px; background:var(--ssr-ivory);
+    clip-path:polygon(14% 44%,0 60%,40% 100%,100% 16%,84% 2%,38% 70%);
+  }
+  .ssr-row input:focus-visible{outline:2px solid var(--ssr-info);outline-offset:2px}
+  .ssr-row-main{flex:1; min-width:0; display:grid; gap:2px}
+  .ssr-row-title{font-size:13.5px; font-weight:600}
+  .ssr-row-key{
+    font:11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--ssr-mut);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .ssr-badge{flex:none; font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:999px; border:1px solid}
+  .ssr-badge.full{color:var(--ssr-danger); border-color:color-mix(in srgb,var(--ssr-danger) 40%,transparent); background:color-mix(in srgb,var(--ssr-danger) 10%,transparent)}
+  .ssr-badge.part{color:var(--ssr-amber); border-color:color-mix(in srgb,var(--ssr-amber) 40%,transparent); background:color-mix(in srgb,var(--ssr-amber) 10%,transparent)}
+
+  .ssr-empty{display:grid; place-items:center; gap:6px; text-align:center; padding:30px 16px}
+  .ssr-empty[hidden]{display:none}
+  .ssr-empty i{font-style:normal; font-size:34px}
+  .ssr-empty b{font-size:15px}
+  .ssr-empty span{font-size:12.5px; color:var(--ssr-mut); max-width:340px; line-height:1.5}
+
+  /* ── Подвал: счётчик, отмена, кнопка-удержание ── */
+  .ssr-foot{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+    border-top:1px solid var(--ssr-line); padding:12px 16px 8px; margin-top:8px;
+  }
+  .ssr-foot-left{display:flex; align-items:center; gap:12px}
+  .ssr-count{font-size:12px; color:var(--ssr-mut); font-variant-numeric:tabular-nums}
+  .ssr-link{background:none; border:none; padding:0; font-size:12px; font-weight:600; color:var(--ssr-info); cursor:pointer}
+  .ssr-link:hover{color:var(--ssr-ink)}
+  .ssr-foot-right{display:flex; gap:10px; margin-left:auto}
+  .ssr-ghost{
+    padding:11px 16px; border-radius:12px; border:1px solid var(--ssr-line); background:none;
+    color:var(--ssr-mut); font:600 13px/1 inherit; cursor:pointer; transition:.15s;
+  }
+  .ssr-ghost:hover{color:var(--ssr-ink); border-color:color-mix(in srgb,var(--ssr-ink) 30%,var(--ssr-line))}
+  .ssr-hold{
+    position:relative; overflow:hidden; min-width:196px; padding:12px 18px; border-radius:12px;
+    font:700 13.5px/1 inherit; letter-spacing:.02em; color:var(--ssr-ivory); cursor:pointer;
+    border:1px solid color-mix(in srgb,var(--ssr-danger) 55%,transparent);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--ssr-danger) 22%,var(--ssr-sur2)),var(--ssr-sur2));
+    box-shadow:0 6px 20px color-mix(in srgb,var(--ssr-danger) 25%,transparent);
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    transition:transform .15s,box-shadow .2s,opacity .2s;
+  }
+  .ssr-hold.holding{transform:scale(.985); box-shadow:0 0 0 4px color-mix(in srgb,var(--ssr-danger) 18%,transparent),0 8px 26px color-mix(in srgb,var(--ssr-danger) 35%,transparent)}
+  .ssr-hold:disabled{opacity:.45; cursor:not-allowed; box-shadow:none}
+  .ssr-hold-fill{
+    position:absolute; inset:0; width:0;
+    background:linear-gradient(90deg,var(--ssr-danger2),var(--ssr-danger) 65%,var(--ssr-amber));
+    transition:width .18s ease;
+  }
+  .ssr-hold.holding .ssr-hold-fill{transition:none}
+  .ssr-hold-label{position:relative; z-index:1; display:flex; align-items:center; justify-content:center; gap:8px}
+  .ssr-hold.nudge{animation:ssr-nudge .3s}
+  @keyframes ssr-nudge{25%{transform:translateX(-3px)}50%{transform:translateX(3px)}75%{transform:translateX(-2px)}}
+  .ssr-hint{margin:0; padding:6px 18px 14px; font-size:11px; color:var(--ssr-mut)}
+
+  /* ── Уведомления с отменой ── */
+  .ssr-toasts{
+    position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:99995;
+    display:flex; flex-direction:column; gap:10px; width:min(460px,calc(100vw - 24px));
+    pointer-events:none; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .ssr-toast{
+    position:relative; overflow:hidden; display:flex; align-items:center; gap:12px;
+    padding:12px 14px; border-radius:14px; color:var(--ssr-ink); pointer-events:auto;
+    background:linear-gradient(165deg,var(--ssr-sur2),var(--ssr-sur));
+    border:1px solid var(--ssr-line); border-left:4px solid var(--ssr-ok);
+    box-shadow:0 16px 44px rgba(0,0,0,.4);
+    animation:ssr-toast-in .28s cubic-bezier(.2,.9,.3,1.2);
+    transition:opacity .18s,transform .18s;
+  }
+  .ssr-toast.info{border-left-color:var(--ssr-info)}
+  .ssr-toast.out{opacity:0; transform:translateY(-10px)}
+  @keyframes ssr-toast-in{from{opacity:0;transform:translateY(-14px) scale(.97)}}
+  .ssr-toast-icon{width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center;
+    background:color-mix(in srgb,var(--ssr-ok) 15%,transparent); color:var(--ssr-ok)}
+  .ssr-toast.info .ssr-toast-icon{background:color-mix(in srgb,var(--ssr-info) 15%,transparent); color:var(--ssr-info)}
+  .ssr-toast-icon svg{width:17px;height:17px}
+  .ssr-toast-text{flex:1; min-width:0; display:grid; gap:1px}
+  .ssr-toast-text b{font-size:13.5px}
+  .ssr-toast-text span{font-size:11.5px; color:var(--ssr-mut)}
+  .ssr-toast-undo{
+    font:700 12px/1 inherit; padding:7px 12px; border-radius:999px; cursor:pointer;
+    color:var(--ssr-ok); border:1px solid color-mix(in srgb,var(--ssr-ok) 55%,transparent);
+    background:color-mix(in srgb,var(--ssr-ok) 10%,transparent); transition:.15s;
+  }
+  .ssr-toast-undo:hover{background:color-mix(in srgb,var(--ssr-ok) 22%,transparent)}
+  .ssr-toast-mini{
+    width:30px;height:30px;flex:none;border-radius:9px;border:1px solid var(--ssr-line);
+    background:none;color:var(--ssr-mut);cursor:pointer;display:grid;place-items:center;transition:.15s;
+  }
+  .ssr-toast-mini:hover{color:var(--ssr-ink);background:var(--ssr-sur2)}
+  .ssr-toast-mini svg{width:15px;height:15px}
+  .ssr-toast-bar{
+    position:absolute; left:0; bottom:0; height:3px; width:100%;
+    background:linear-gradient(90deg,var(--ssr-ok),var(--ssr-info));
+    animation:ssr-bar linear forwards;
+  }
+  @keyframes ssr-bar{from{width:100%}to{width:0}}
+
+  /* ── Мобильный bottom-sheet ── */
+  @media (max-width:560px){
+    .ssr-scrim{align-items:flex-end; padding:0}
+    .ssr-dialog{width:100%; max-height:88vh; border-radius:20px 20px 0 0; transform:translateY(100%)}
+    .ssr-foot{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+    .ssr-hint{display:none}
+    .ssr-hold{flex:1}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .ssr-scrim,.ssr-dialog,.ssr-btn,.ssr-btn svg,.ssr-hold,.ssr-hold-fill,.ssr-toast{transition-duration:.01ms!important;animation-duration:.01ms!important}
+    .ssr-accent{animation:none}
+  }
+</style>
+
+<button id="ssr-btn" class="ssr-btn ssr-dark" type="button" aria-haspopup="dialog"
+        aria-label="Сбросить статистику во всех режимах"
+        title="Сбросить статистику во всех режимах (Shift+Alt+R)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+  </svg>
+  <span>Сброс статистики</span>
+</button>
+
+<div id="ssr-modal" class="ssr-scrim ssr-dark" hidden>
+  <div class="ssr-dialog" role="dialog" aria-modal="true" aria-labelledby="ssr-title">
+    <div class="ssr-accent" aria-hidden="true"></div>
+    <header class="ssr-head">
+      <div class="ssr-head-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+        </svg>
+      </div>
+      <div>
+        <h2 id="ssr-title">Сбросить статистику?</h2>
+        <p class="ssr-sub">Результаты всех режимов StudySolf будут очищены. Тема и настройки звука сохранятся. Отменить можно в течение 8 секунд.</p>
+      </div>
+      <button id="ssr-x" class="ssr-x" type="button" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
+      </button>
+    </header>
+    <div class="ssr-body">
+      <div id="ssr-list" class="ssr-list"></div>
+      <div id="ssr-empty" class="ssr-empty" hidden>
+        <i aria-hidden="true">🎼</i>
+        <b>Сохранённой статистики не найдено</b>
+        <span id="ssr-empty-note">Сброс обнулит счётчики текущей сессии во всех режимах.</span>
+      </div>
+    </div>
+    <footer class="ssr-foot">
+      <div class="ssr-foot-left">
+        <span id="ssr-count" class="ssr-count"></span>
+        <button id="ssr-selectall" class="ssr-link" type="button">Снять все</button>
+      </div>
+      <div class="ssr-foot-right">
+        <button id="ssr-cancel" class="ssr-ghost" type="button">Отмена</button>
+        <button id="ssr-hold" class="ssr-hold" type="button">
+          <span id="ssr-hold-fill" class="ssr-hold-fill" aria-hidden="true"></span>
+          <span id="ssr-hold-label" class="ssr-hold-label">Сбросить всё</span>
+        </button>
+      </div>
+    </footer>
+    <p class="ssr-hint">Удерживай красную кнопку ~1 секунду — защита от случайного нажатия · Esc — закрыть</p>
+  </div>
+</div>
+
+<div id="ssr-toasts" class="ssr-toasts ssr-dark" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+  if (window.__studySolfReset) return;           // защита от повторной вставки
+  window.__studySolfReset = true;
+
+  const $ = id => document.getElementById(id);
+  const btn = $('ssr-btn'), modal = $('ssr-modal'), list = $('ssr-list'),
+        empty = $('ssr-empty'), emptyNote = $('ssr-empty-note'), countEl = $('ssr-count'),
+        selAll = $('ssr-selectall'), cancelBtn = $('ssr-cancel'), xBtn = $('ssr-x'),
+        hold = $('ssr-hold'), holdFill = $('ssr-hold-fill'), holdLabel = $('ssr-hold-label'),
+        toasts = $('ssr-toasts');
+  if (!btn || !modal) return;
+  const dialog = modal.querySelector('.ssr-dialog');
+
+  /* ── Классификация ключей хранилища ── */
+  const STATS_RE = /(stats|statistic|score|progress|streak|history|result|attempt|session|record|best|accuracy|correct|incorrect|wrong|hits|misses|tries|xp|points|completed|plays|rating|earned|runs|rounds|answers|(^|[_\-.])stat([_\-.]|$))/i;
+  const PREF_RE  = /(theme|sound|mute|volume|audio|mic|settings|prefs|config|lang|locale|onboard|tutorial|calib)/i;
+  const APP_RE   = /^(study[-_]?solf|solf|ss[-_])/i;
+  const isStat = k => STATS_RE.test(k);
+  const isPref = k => PREF_RE.test(k) && !isStat(k);
+
+  const MODES = {
+    sing: { label: 'Пение с анализатором', icon: '🎤' },
+    ear:  { label: 'Слуховой анализ',      icon: '🎧' },
+    prog: { label: 'Прогресс и результаты', icon: '📈' }
+  };
+  const modeOf = k => {
+    const s = k.toLowerCase();
+    if (/sing|vocal|pitch|voice|analy|tone/.test(s)) return 'sing';
+    if (/ear|interval|chord|melody|note|hear|слух/.test(s)) return 'ear';
+    return 'prog';
+  };
+
+  const DICT = { stats:'Статистика', statistics:'Статистика', stat:'Статистика', score:'Очки', scores:'Очки',
+    best:'Рекорд', record:'Рекорд', records:'Рекорды', streak:'Серия', history:'История', progress:'Прогресс',
+    results:'Результаты', result:'Результат', attempts:'Попытки', attempt:'Попытка', sessions:'Сессии',
+    session:'Сессия', accuracy:'Точность', correct:'Верные', wrong:'Ошибки', hits:'Попадания', misses:'Промахи',
+    tries:'Попытки', xp:'Опыт', points:'Очки', completed:'Пройдено', plays:'Сыграно', rating:'Рейтинг',
+    earned:'Заработано', runs:'Запуски', rounds:'Раунды', games:'Игры', answers:'Ответы', sing:'Пение',
+    singing:'Пение', vocal:'Вокал', voice:'Голос', pitch:'Высота тона', analyzer:'Анализатор', ear:'Слух',
+    interval:'Интервал', intervals:'Интервалы', chord:'Аккорд', chords:'Аккорды', melody:'Мелодия',
+    notes:'Ноты', note:'Нота', total:'Всего', all:'Все', mode:'Режим', modes:'Режимы', daily:'За день',
+    week:'Неделя', data:'Данные', study:'Study', solf:'Solf' };
+  const humanize = key => {
+    const words = key.replace(/^(study[-_]?solf|solf|ss)[-_:.]?/i, '')
+      .split(/[_\-.:]+|(?<=[a-zа-я0-9])(?=[A-ZА-Я])/).filter(Boolean)
+      .map(w => DICT[w.toLowerCase()] || (w[0].toUpperCase() + w.slice(1)));
+    return words.join(' ').trim() || key;
+  };
+  const fmtBytes = b => b < 1024 ? b + ' Б' : (b / 1024).toFixed(1) + ' КБ';
+  const plural = (n, a, b, c) => { const m = Math.abs(n) % 100, d = m % 10;
+    return (m > 10 && m < 20) ? c : (d > 1 && d < 5) ? b : d === 1 ? a : c; };
+
+  /* Вырезает только поля статистики из JSON, сохраняя настройки */
+  const sanitize = (value) => {
+    let removed = 0;
+    const walk = (x, depth) => {
+      if (Array.isArray(x)) return x.map(i => (i && typeof i === 'object') ? walk(i, depth + 1) : i);
+      if (x && typeof x === 'object' && depth < 7) {
+        const o = {};
+        for (const [k, v] of Object.entries(x)) {
+          if (isStat(k)) { removed++; continue; }
+          if (isPref(k)) { o[k] = v; continue; }
+          o[k] = (v && typeof v === 'object') ? walk(v, depth + 1) : v;
+        }
+        return o;
+      }
+      return x;
+    };
+    return { out: walk(value, 0), removed };
+  };
+
+  const collect = () => {
+    const entries = []; let storageOK = true;
+    for (const store of [localStorage, sessionStorage]) {
+      let keys = [];
+      try { keys = Object.keys(store); } catch { storageOK = false; continue; }
+      for (const key of keys) {
+        if (isPref(key)) continue;
+        const app = APP_RE.test(key), stat = isStat(key);
+        if (!app && !stat) continue;
+        let value; try { value = store.getItem(key); } catch { continue; }
+        if (value == null) continue;
+        const entry = { store, key, value, partial: false, sanitized: null,
+                        mode: modeOf(key), size: value.length * 2 };
+        if (stat) { entries.push(entry); continue; }
+        // Ключ приложения без явного «stats» в имени: чистим только поля статистики внутри JSON
+        const t = value.trim();
+        if (t[0] === '{' || t[0] === '[') {
+          let parsed = null; try { parsed = JSON.parse(t); } catch {}
+          if (parsed && typeof parsed === 'object') {
+            const r = sanitize(parsed);
+            if (r.removed === 0) continue;                     // чистые настройки — не трогаем
+            const left = Array.isArray(r.out) ? r.out.length : Object.keys(r.out).length;
+            if (left > 0) { entry.partial = true; entry.sanitized = r.out; }
+            entries.push(entry);
+          } else entries.push(entry);
+        } else entries.push(entry);
+      }
+    }
+    return { entries, storageOK };
+  };
+
+  /* ── Тема: следуем за переключателем 🌙 приложения ── */
+  const themeRoots = [btn, modal, toasts];
+  const applyTheme = () => {
+    const de = document.documentElement, b = document.body;
+    const hint = (de.dataset.theme || '') + ' ' + (b?.dataset.theme || '') + ' ' +
+                 de.className + ' ' + (b?.className || '');
+    const light = /light/i.test(hint) ? true : /dark/i.test(hint) ? false
+      : matchMedia('(prefers-color-scheme: light)').matches;
+    themeRoots.forEach(el => { el.classList.toggle('ssr-light', light); el.classList.toggle('ssr-dark', !light); });
+  };
+  applyTheme();
+  new MutationObserver(applyTheme).observe(document.documentElement,
+    { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] });
+  if (document.body) new MutationObserver(applyTheme).observe(document.body,
+    { attributes: true, attributeFilter: ['class', 'data-theme'] });
+  matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', applyTheme);
+
+  /* ── Размещение кнопки: ручной слот → шапка (перед 🔊/🌙) → плавающая ── */
+  const slot = document.getElementById('stats-reset-slot');
+  if (slot) slot.appendChild(btn);
+  else {
+    const header = ['header', '.header', '#header', '.topbar', '.app-header', 'nav']
+      .map(s => document.querySelector(s)).find(Boolean);
+    if (header) {
+      const anchor = [...header.children].find(ch => /🔊|🔈|🔇|🌙|🌞/.test(ch.textContent));
+      anchor ? header.insertBefore(btn, anchor) : header.appendChild(btn);
+      btn.classList.add('in-header');
+    } else btn.classList.add('ssr-dock');
+  }
+
+  /* ── Диалог ── */
+  let current = [], lastFocus = null, pending = null;
+
+  const renderList = () => {
+    list.innerHTML = '';
+    const has = current.length > 0;
+    list.hidden = !has; empty.hidden = has; selAll.hidden = !has;
+    if (!has) return;
+    let html = '';
+    for (const id of ['sing', 'ear', 'prog']) {
+      const group = current.map((e, i) => ({ e, i })).filter(x => x.e.mode === id);
+      if (!group.length) continue;
+      html += `<div class="ssr-group"><span aria-hidden="true">${MODES[id].icon}</span>${MODES[id].label}<b>${group.length}</b></div>`;
+      for (const { e, i } of group) {
+        const store = e.store === localStorage ? 'local' : 'session';
+        const badge = e.partial
+          ? '<span class="ssr-badge part" title="Поля статистики будут очищены, настройки внутри ключа сохранятся">только стат.</span>'
+          : '<span class="ssr-badge full" title="Запись будет удалена целиком">целиком</span>';
+        html += `<label class="ssr-row">
+          <input type="checkbox" checked data-i="${i}" aria-label="${humanize(e.key)}">
+          <span class="ssr-row-main">
+            <span class="ssr-row-title">${humanize(e.key)}</span>
+            <span class="ssr-row-key">${e.key} · ${store} · ${fmtBytes(e.size)}</span>
+          </span>${badge}</label>`;
+      }
+    }
+    list.innerHTML = html;
+  };
+
+  const selected = () => [...list.querySelectorAll('input:checked')].map(c => current[+c.dataset.i]);
+
+  const updateHold = () => {
+    const n = selected().length;
+    if (current.length && n === 0) { hold.disabled = true; holdLabel.textContent = 'Выбери записи'; }
+    else { hold.disabled = false;
+      holdLabel.textContent = current.length ? 'Сбросить всё' : 'Сбросить текущую сессию'; }
+  };
+  const updateFooter = () => {
+    const sel = selected(), bytes = sel.reduce((s, e) => s + e.size, 0);
+    countEl.textContent = current.length
+      ? `${sel.length} из ${current.length} · ${fmtBytes(bytes)}` : 'Записей нет';
+    selAll.textContent = sel.length === current.length ? 'Снять все' : 'Выбрать все';
+    updateHold();
+  };
+
+  const lockScroll = () => {
+    const sw = innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.overflow = 'hidden';
+    if (sw > 0) document.documentElement.style.paddingRight = sw + 'px';
+  };
+  const unlockScroll = () => {
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.paddingRight = '';
+  };
+
+  const open = () => {
+    if (!modal.hidden) return;
+    const c = collect(); current = c.entries;
+    emptyNote.textContent = c.storageOK
+      ? 'Сброс обнулит счётчики текущей сессии во всех режимах.'
+      : 'Хранилище браузера недоступно — будут обнулены счётчики текущей сессии.';
+    renderList(); updateFooter();
+    lastFocus = document.activeElement;
+    modal.hidden = false; lockScroll();
+    requestAnimationFrame(() => modal.classList.add('open'));
+    cancelBtn.focus();
+  };
+  const close = () => {
+    if (modal.hidden) return;
+    cancelHold();
+    modal.classList.remove('open');
+    setTimeout(() => { modal.hidden = true; }, 220);
+    unlockScroll();
+    lastFocus?.focus?.();
+  };
+
+  btn.addEventListener('click', open);
+  cancelBtn.addEventListener('click', close);
+  xBtn.addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  list.addEventListener('change', updateFooter);
+  selAll.addEventListener('click', () => {
+    const boxes = [...list.querySelectorAll('input')];
+    const target = boxes.some(c => !c.checked);
+    boxes.forEach(c => c.checked = target);
+    updateFooter();
+  });
+  modal.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key !== 'Tab') return;
+    const f = [...dialog.querySelectorAll('button,input')].filter(el => !el.disabled && el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.altKey && e.shiftKey && e.code === 'KeyR') { e.preventDefault(); open(); }
+  });
+
+  /* ── Подтверждение удержанием (мышь, тач, клавиатура) ── */
+  let holding = false, raf = 0, t0 = 0, justDone = false;
+  const HOLD_MS = 800;
+  const startHold = () => {
+    if (holding || hold.disabled) return;
+    holding = true; hold.classList.add('holding');
+    holdLabel.textContent = 'Держи…'; t0 = performance.now();
+    const tick = now => {
+      if (!holding) return;
+      const p = Math.min(1, (now - t0) / HOLD_MS);
+      holdFill.style.width = (p * 100) + '%';
+      if (p >= 1) {
+        holding = false; justDone = true;
+        setTimeout(() => justDone = false, 400);
+        hold.classList.remove('holding'); holdFill.style.width = '0';
+        doReset(selected());
+      } else raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  };
+  const cancelHold = () => {
+    if (!holding) return;
+    holding = false; cancelAnimationFrame(raf);
+    hold.classList.remove('holding'); holdFill.style.width = '0';
+    updateHold();
+  };
+  hold.addEventListener('pointerdown', e => {
+    if (hold.disabled) return;
+    e.preventDefault(); hold.setPointerCapture(e.pointerId); startHold();
+  });
+  hold.addEventListener('pointerup', cancelHold);
+  hold.addEventListener('pointercancel', cancelHold);
+  hold.addEventListener('lostpointercapture', cancelHold);
+  hold.addEventListener('contextmenu', e => e.preventDefault());
+  hold.addEventListener('keydown', e => {
+    if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); startHold(); }
+  });
+  hold.addEventListener('keyup', e => {
+    if (e.key === ' ' || e.key === 'Enter') cancelHold();
+  });
+  hold.addEventListener('click', () => {
+    if (justDone || holding || hold.disabled) return;
+    hold.classList.remove('nudge'); void hold.offsetWidth; hold.classList.add('nudge');
+  });
+
+  /* ── Сброс и восстановление ── */
+  const fireStorage = () => {
+    try { window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: localStorage })); } catch {}
+  };
+  const callHooks = () => {
+    for (const name of ['resetStats', 'resetAllStats', 'clearStats', 'resetStatistics'])
+      if (typeof window[name] === 'function') { try { window[name](); } catch {} }
+    try { window.StudySolf?.resetStats?.(); } catch {}
+  };
+
+  const doReset = (entries) => {
+    const snap = entries.map(e => ({ store: e.store, key: e.key, value: e.value }));
+    const dom = [...document.querySelectorAll('[data-stat]')].map(el => ({ el, html: el.innerHTML }));
+    const hist = [...document.querySelectorAll('[data-stat-history]')].map(el => ({ el, html: el.innerHTML }));
+
+    for (const e of entries) {
+      try {
+        if (e.partial) e.store.setItem(e.key, JSON.stringify(e.sanitized));
+        else e.store.removeItem(e.key);
+      } catch {}
+    }
+    dom.forEach(d => d.el.textContent = '0');
+    hist.forEach(h => h.el.innerHTML = '');
+    fireStorage(); callHooks();
+    window.dispatchEvent(new CustomEvent('studysolf:stats-reset', {
+      detail: { keys: entries.map(e => e.key), count: entries.length,
+                modes: [...new Set(entries.map(e => e.mode))] }
+    }));
+
+    pending?.dismiss();
+    close();
+    showUndoToast(entries.length, { snap, dom, hist });
+  };
+
+  const restore = p => {
+    for (const s of p.snap) { try { s.store.setItem(s.key, s.value); } catch {} }
+    p.dom.forEach(d => { if (d.el.isConnected) d.el.innerHTML = d.html; });
+    p.hist.forEach(h => { if (h.el.isConnected) h.el.innerHTML = h.html; });
+    fireStorage();
+    window.dispatchEvent(new CustomEvent('studysolf:stats-restore', {
+      detail: { keys: p.snap.map(s => s.key) }
+    }));
+  };
+
+  /* ── Уведомления ── */
+  const ICON_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+  const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg>';
+  const ICON_RELOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>';
+  const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>';
+
+  const dismissNode = node => {
+    node.classList.add('out');
+    setTimeout(() => node.remove(), 200);
+  };
+  const pushToast = node => {
+    while (toasts.children.length >= 3) toasts.firstChild.remove();
+    toasts.appendChild(node);
+  };
+
+  const showUndoToast = (n, payload) => {
+    const node = document.createElement('div');
+    node.className = 'ssr-toast'; node.setAttribute('role', 'status');
+    node.innerHTML = `
+      <div class="ssr-toast-icon">${ICON_OK}</div>
+      <div class="ssr-toast-text"><b>Статистика сброшена</b>
+        <span>${n ? `${n} ${plural(n, 'запись', 'записи', 'записей')} очищено · все режимы`
+                  : 'Счётчики сессии обнулены · все режимы'}</span></div>
+      <button type="button" class="ssr-toast-undo">Вернуть</button>
+      <button type="button" class="ssr-toast-mini" title="Перезагрузить страницу, чтобы все режимы перечитали данные">${ICON_RELOAD}</button>
+      <button type="button" class="ssr-toast-mini" title="Закрыть">${ICON_X}</button>
+      <i class="ssr-toast-bar" style="animation-duration:8000ms"></i>`;
+    const [undoB, reloadB, xB] = node.querySelectorAll('button');
+    const timer = setTimeout(() => pending?.dismiss(), 8000);
+    pending = Object.assign(payload, {
+      dismiss() { clearTimeout(timer); dismissNode(node); if (pending === this) pending = null; }
+    });
+    undoB.addEventListener('click', () => {
+      const p = pending; if (!p) return;
+      p.dismiss(); restore(p);
+      infoToast('Статистика восстановлена', 'Данные всех режимов вернулись на место.');
+    });
+    reloadB.addEventListener('click', () => location.reload());
+    xB.addEventListener('click', () => pending?.dismiss());
+    pushToast(node);
+    undoB.focus();
+  };
+
+  const infoToast = (title, sub) => {
+    const node = document.createElement('div');
+    node.className = 'ssr-toast info'; node.setAttribute('role', 'status');
+    node.innerHTML = `
+      <div class="ssr-toast-icon">${ICON_INFO}</div>
+      <div class="ssr-toast-text"><b>${title}</b><span>${sub}</span></div>
+      <i class="ssr-toast-bar" style="animation-duration:3200ms"></i>`;
+    pushToast(node);
+    setTimeout(() => dismissNode(node), 3200);
+  };
+
+  /* Публичный API — можно вызвать из кода любого режима */
+  window.StudySolfReset = {
+    open,
+    resetAll() { doReset(collect().entries); },
+    version: '1.0'
+  };
+})();
+</script>
 </body>
 </html>
