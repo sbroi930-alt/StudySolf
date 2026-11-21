@@ -487,7 +487,7 @@ function buildChordRound(kind){
 
 /* ===================== ВИРТУАЛЬНАЯ КЛАВИАТУРА C2–C6 (49 клавиш) ===================== */
 function createKeyboard(){
-  const wrap=el('div',{class:'kbd'}),keys=new Map(),blacks=[];const W=100/22;let wi=0;
+  const wrap=el('div',{class:'kbd'}),keys=new Map(),blacks=[];const W=100/29;let wi=0;
   for(let m=MIN_MIDI;m<=MAX_MIDI;m++){
     const isB=[1,3,6,8,10].includes(m%12);
     const k=el('div',{class:'key '+(isB?'black':'white')},isB?null:el('span',{},m%12===0?noteName(m):''));
