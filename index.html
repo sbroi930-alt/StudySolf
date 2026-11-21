@@ -173,7 +173,7 @@ canvas.graph{width:100%;height:270px;display:block;border-radius:14px;background
 /* клавиатура C2–C6 */
 .kb-caption{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--faint);margin:18px 0 6px;letter-spacing:.06em}
 .kbd-wrap{overflow-x:auto}
-.kbd{position:relative;display:flex;height:110px;min-width:600px;user-select:none;touch-action:manipulation;border-radius:0 0 12px 12px;overflow:hidden;border:1px solid var(--line2)}
+.kbd{position:relative;display:flex;height:110px;min-width:840px;user-select:none;touch-action:manipulation;border-radius:0 0 12px 12px;overflow:hidden;border:1px solid var(--line2)}
 .key{cursor:pointer;transition:background .1s}
 .key.white{flex:1;position:relative;background:linear-gradient(180deg,var(--key-w),var(--key-w2));border-right:1px solid rgba(0,0,0,.25);border-radius:0 0 5px 5px}
 .key.black{position:absolute;top:0;height:62%;background:linear-gradient(180deg,var(--key-b2),var(--key-b));border-radius:0 0 4px 4px;z-index:2;box-shadow:0 4px 8px rgba(0,0,0,.5)}
@@ -449,7 +449,7 @@ function buildIntervalRound(){
   const semi=o.interval==='rand'?randInt(1,12):+o.interval;
   const dir=o.dir==='rand'?rnd(['up','down']):o.dir;
   let lo=dir==='up'?MIN_MIDI:MIN_MIDI+semi,hi=dir==='up'?MAX_MIDI-semi:MAX_MIDI;
-  const clo=Math.max(lo,43),chi=Math.min(hi,64);if(clo<=chi){lo=clo;hi=chi;}
+  const clo=Math.max(lo,43),chi=Math.min(hi,76);if(clo<=chi){lo=clo;hi=chi;}
   const root=randInt(lo,hi),target=root+(dir==='up'?semi:-semi);
   return {notes:[{midi:root},{midi:target,hidden:o.hide}],
     title:INTERVAL_FULL[semi]+' '+DIR_RU[dir],
@@ -768,7 +768,7 @@ function makeEarView(cfg){return {render(root){
 
 // Задание на интервал: обе ноты в C2–C6
 function genEarInterval(o){const pool=INTERVALS.filter(i=>LEVELS[o.level].includes(i.id));const iv=rnd(pool);
-  const root=randInt(Math.max(MIN_MIDI,40),Math.min(MAX_MIDI-iv.semi,64));
+  const root=randInt(Math.max(MIN_MIDI,40),Math.min(MAX_MIDI-iv.semi,76));
   const dir=o.dir==='mixed'?rnd(['asc','desc']):o.dir,lo=root,hi=root+iv.semi;
   const play=o.mode==='harmonic'?()=>audio.playChord([lo,hi],1.8):()=>audio.playSequence(dir==='asc'?[lo,hi]:[hi,lo],0.75,0.9);
   return {key:iv.name,answer:iv.id,options:pool.map(i=>({id:i.id,label:i.name})),play,
