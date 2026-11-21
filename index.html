@@ -170,7 +170,7 @@ canvas.graph{width:100%;height:270px;display:block;border-radius:14px;background
 .result-box{margin-top:16px;padding:14px;border-radius:14px;background:var(--surface2);border:1px solid var(--line)}
 .result-num{font-family:'Unbounded';font-weight:800;font-size:28px;color:var(--teal)}
 
-/* клавиатура C2–C5 */
+/* клавиатура C2–C6 */
 .kb-caption{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--faint);margin:18px 0 6px;letter-spacing:.06em}
 .kbd-wrap{overflow-x:auto}
 .kbd{position:relative;display:flex;height:110px;min-width:600px;user-select:none;touch-action:manipulation;border-radius:0 0 12px 12px;overflow:hidden;border:1px solid var(--line2)}
@@ -215,7 +215,7 @@ canvas.graph{width:100%;height:270px;display:block;border-radius:14px;background
     <button class="icon-btn" id="themeBtn" title="Тема">🌙</button>
   </div>
 </header>
-<div class="range-note">Диапазон: C2 (до большой октавы) — C5 (до третьей октавы)</div>
+<div class="range-note">Диапазон: C2 (до большой октавы) — C6 (до третьей октавы)</div>
 <main id="view"></main>
 
 <script>
@@ -223,7 +223,7 @@ canvas.graph{width:100%;height:270px;display:block;border-radius:14px;background
 const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const RU_NAMES=['до','до-диез','ре','ре-диез','ми','фа','фа-диез','соль','соль-диез','ля','ля-диез','си'];
 const MIN_MIDI=36,MAX_MIDI=72; // C2..C5
-const RANGE_TEXT='Диапазон: C2 (до большой октавы) — C5 (до третьей октавы).';
+const RANGE_TEXT='Диапазон: C2 (до большой октавы) — C6 (до третьей октавы).';
 const ROMAN=['I','II','III','IV','V','VI','VII'];
 const $=(s,p=document)=>p.querySelector(s);
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
@@ -231,7 +231,7 @@ const randInt=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const noteName=m=>NOTE_NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1);
 const midiFreq=m=>440*Math.pow(2,(m-69)/12); // A4 = 440 Гц
 
-// Сдвиг на целое число октав, чтобы все ноты попали в C2–C5
+// Сдвиг на целое число октав, чтобы все ноты попали в C2–C6
 function fitShift(midis){let sh=0;const mn=Math.min(...midis),mx=Math.max(...midis);while(mx+sh>MAX_MIDI)sh-=12;while(mn+sh<MIN_MIDI)sh+=12;return mx+sh<=MAX_MIDI?sh:0;}
 // Перенос одиночной ноты в диапазон
 function clampMidi(m){while(m>MAX_MIDI)m-=12;while(m<MIN_MIDI)m+=12;return m;}
@@ -439,7 +439,7 @@ function buildScaleRound(){
   const third=scale.steps.includes(4)?4:3;
   return {notes,tonic,triad:[tonic,tonic+third,tonic+7],
     title:`${NOTE_NAMES[tonicPc]} · ${scale.name}`,
-    sub:`${modeLbl} · ${o.mode==='full'||o.order!=='rand'?DIR_RU[o.dir]:'случайные ступени'} · звучит: ${noteName(Math.min(...all))}–${noteName(Math.max(...all))}${sh?' · октава подобрана под диапазон C2–C5':''}${o.anchor?' · опора тоники':''}`,
+    sub:`${modeLbl} · ${o.mode==='full'||o.order!=='rand'?DIR_RU[o.dir]:'случайные ступени'} · звучит: ${noteName(Math.min(...all))}–${noteName(Math.max(...all))}${sh?' · октава подобрана под диапазон C2–C6':''}${o.anchor?' · опора тоники':''}`,
     play(){let t=0;if(o.anchor){audio.playNote(tonic,1.1);t=1.3;}audio.playSequence(all,0.5,0.6,t);},
     refPlay(){if(!o.anchor)return 0;audio.playNote(tonic,1.0);return 1.2;}};
 }
@@ -480,12 +480,12 @@ function buildChordRound(kind){
   const word=kind==='triads'?'трезвучия':'септаккорда';
   return {notes,
     title:o.chain?`Цепочка · ${len} ${word}`:ROMAN[groups[0].deg]+' · '+chordName(played[0],size)+' · '+invLabels[groups[0].inv],
-    sub:`${NOTE_NAMES[+o.tonic]} · ${scale.name}${sh?' · октава подобрана под C2–C5':''} · пойте звуки каждого аккорда снизу вверх`,
+    sub:`${NOTE_NAMES[+o.tonic]} · ${scale.name}${sh?' · октава подобрана под C2–C6':''} · пойте звуки каждого аккорда снизу вверх`,
     play(){let t=0;if(o.anchor){audio.playChord(tt,0.9);t=1.2;}playGroups(played,t);},
     refPlay(){if(!o.anchor)return 0;audio.playChord(tt,0.9);return 1.2;}};
 }
 
-/* ===================== ВИРТУАЛЬНАЯ КЛАВИАТУРА C2–C5 (37 клавиш) ===================== */
+/* ===================== ВИРТУАЛЬНАЯ КЛАВИАТУРА C2–C6 (49 клавиш) ===================== */
 function createKeyboard(){
   const wrap=el('div',{class:'kbd'}),keys=new Map(),blacks=[];const W=100/22;let wi=0;
   for(let m=MIN_MIDI;m<=MAX_MIDI;m++){
@@ -521,9 +521,9 @@ function createAnalyzer(parent,opts){
     el('div',{class:'now-row'},indicator,el('span',{},'Текущая нота:'),curNote,freqEl),
     el('div',{class:'meters'},el('div',{class:'meter-l'},el('span',{class:'small muted'},'Громкость голоса'),el('div',{class:'level'},level)),el('div',{class:'meter-l'},el('span',{class:'small muted'},'Удержание ноты'),el('div',{class:'level hold'},holdBar))),
     hintEl,cv,chips,
-    el('div',{class:'kb-caption'},el('span',{},'C2 · до большой октавы'),el('span',{},'фиолетовый — ноты задания · жёлтый — текущая · зелёный — спето'),el('span',{},'C5 · до третьей октавы')),
+    el('div',{class:'kb-caption'},el('span',{},'C2 · до большой октавы'),el('span',{},'фиолетовый — ноты задания · жёлтый — текущая · зелёный — спето'),el('span',{},'C6 · до третьей октавы')),
     kb.el,result,
-    el('p',{class:'hint-line'},'Индикатор: зелёный — точно, жёлтый — близко (в пределах допуска), красный — мимо. Ступень засчитывается, когда нота удерживается в допуске. Ноты вне диапазона C2–C5 не засчитываются.')));
+    el('p',{class:'hint-line'},'Индикатор: зелёный — точно, жёлтый — близко (в пределах допуска), красный — мимо. Ступень засчитывается, когда нота удерживается в допуске. Ноты вне диапазона C2–C6 не засчитываются.')));
   const onResize=()=>draw();window.addEventListener('resize',onResize);
 
   const isShown=(i,res)=>{const n=st.round.notes[i];return !n.hidden||res[i]!=null;};
@@ -605,7 +605,7 @@ function createAnalyzer(parent,opts){
       if(ac<=P.tol){run.hold+=dt;run.samples.push(ac);}else{run.hold=Math.max(0,run.hold-dt*1.5);if(run.hold===0)run.samples=[];}
     }else{
       st.hist.push({t:now,m:null});indicator.className='indicator';curNote.textContent='—';freqEl.textContent='';
-      if(out)hintEl.textContent='Нота вне диапазона C2–C5 — не засчитывается.';
+      if(out)hintEl.textContent='Нота вне диапазона C2–C6 — не засчитывается.';
       run.hold=Math.max(0,run.hold-dt);if(run.hold===0)run.samples=[];
     }
     trimHist(now);
@@ -766,7 +766,7 @@ function makeEarView(cfg){return {render(root){
   renderTable();quiz.start();
 }};}
 
-// Задание на интервал: обе ноты в C2–C5
+// Задание на интервал: обе ноты в C2–C6
 function genEarInterval(o){const pool=INTERVALS.filter(i=>LEVELS[o.level].includes(i.id));const iv=rnd(pool);
   const root=randInt(Math.max(MIN_MIDI,40),Math.min(MAX_MIDI-iv.semi,64));
   const dir=o.dir==='mixed'?rnd(['asc','desc']):o.dir,lo=root,hi=root+iv.semi;
@@ -793,7 +793,7 @@ function genEarMode(o){const pool=EAR_MODE_POOLS[o.level];const id=rnd(pool),sc=
     explain:`${MODE_NAMES[id]} от ${NOTE_NAMES[tonic%12]}: ${tones.slice(0,8).map(noteName).join(' ')}.`};}
 
 const keyName=(pc,minor)=>minor?NOTE_NAMES[pc].toLowerCase()+'-moll':NOTE_NAMES[pc]+'-dur';
-// Каденция T–S–D–T в тональности (все ноты в C2–C5)
+// Каденция T–S–D–T в тональности (все ноты в C2–C6)
 function playCadence(pc,minor,when){const t=48+pc,th=minor?3:4,sx=minor?8:9;
   const chords=[[t-12,t,t+th,t+7],[t-7,t,t+5,t+sx],[t-5,t-1,t+2,t+7],[t-12,t,t+th,t+7]];
   chords.forEach((c,i)=>audio.playChord(c,i===3?1.6:0.8,when+i*0.9));audio.playNote(t,1.4,when+3.9,0.6);}
