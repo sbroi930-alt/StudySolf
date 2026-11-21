@@ -298,7 +298,7 @@ const audio={
     const bright=Math.min(13000,1400+f*7*(0.6+vel));
     lp.frequency.setValueAtTime(bright,t);lp.frequency.setTargetAtTime(Math.max(650,f*2.6),t+0.02,0.4);
     out.connect(lp);lp.connect(this.bus);
-    const ring=0.9+(MAX_MIDI-midi)/36*1.6; // низкие ноты звучат дольше
+    const ring=0.9+(MAX_MIDI-midi)/48*1.6; // низкие ноты звучат дольше
     const peak=vel*0.3;
     out.gain.setValueAtTime(0,t);
     out.gain.linearRampToValueAtTime(peak,t+0.005);
